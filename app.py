@@ -15,7 +15,7 @@ from rca_engine import load_rca_reports
 # Page Config
 # ============================
 st.set_page_config(
-    page_title="TriGuard AI — Command Center",
+    page_title="TriGuard AI",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
