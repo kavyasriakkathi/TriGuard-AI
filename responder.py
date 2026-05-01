@@ -151,6 +151,16 @@ ESCALATION_RULES = {
     "SEV-4": {"action": "LOW PRIORITY QUEUE", "team": "Auto-Reply Bot", "sla": "24 hours"},
 }
 
+# Business Impact Cost Mapping (Estimated financial risk per hour of downtime)
+BUSINESS_IMPACT = {
+    "Payments": 5000,
+    "Security": 10000,
+    "AI Tools": 2500,
+    "HackerRank": 1500,
+    "Performance": 2000,
+    "General": 500
+}
+
 
 def generate_ai_response(domain, issue_type, severity, ticket_text, is_incident=False):
     """
@@ -190,9 +200,16 @@ def generate_ai_response(domain, issue_type, severity, ticket_text, is_incident=
     for i, fix in enumerate(fixes, 1):
         response_parts.append(f"   {i}. {fix}")
     
-    # Escalation
     response_parts.append(f"\n📌 Routing: {escalation['action']}")
     response_parts.append(f"   Assigned Team: {escalation['team']}")
     response_parts.append(f"   SLA Target: {escalation['sla']}")
     
-    return "\n".join(response_parts)
+    # Calculate Business Impact
+    base_cost = BUSINESS_IMPACT.get(domain, 500)
+    sev_mult = {"SEV-1": 1.0, "SEV-2": 0.5, "SEV-3": 0.2, "SEV-4": 0.05}
+    multiplier = sev_mult.get(severity, 0.05)
+    estimated_risk = base_cost * multiplier
+    if is_incident:
+        estimated_risk *= 5 # Multiplier for multi-user impact
+        
+    return "\n".join(response_parts), estimated_risk

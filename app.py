@@ -495,18 +495,19 @@ elif page == "🤖 AI Response Generator":
             severity = classification['severity']
             priority_score = classification['priority_score']
             
-            ai_response = generate_ai_response(domain, issue_type, severity, ticket_text)
+            ai_response, business_risk = generate_ai_response(domain, issue_type, severity, ticket_text)
         
         with col2:
             st.markdown("### 🎯 Classification Result")
             
             sev_color = "#e94560" if severity == "SEV-1" else "#ffd43b" if severity == "SEV-2" else "#4dabf7" if severity == "SEV-3" else "#51cf66"
             
-            mc1, mc2, mc3, mc4 = st.columns(4)
+            mc1, mc2, mc3, mc4, mc5 = st.columns(5)
             mc1.metric("Domain", domain)
             mc2.metric("Issue Type", issue_type)
             mc3.metric("Severity", severity)
             mc4.metric("Score", f"{priority_score}/100")
+            mc5.metric("💰 Risk/hr", f"${business_risk:,.0f}", delta="-High" if severity=="SEV-1" else None, delta_color="inverse")
         
         st.markdown("---")
         
