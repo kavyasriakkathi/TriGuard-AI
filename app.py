@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from responder import generate_ai_response, ESCALATION_RULES
 from classifier import process_ticket
+from rca_engine import load_rca_reports
 
 # ============================
 # Page Config
@@ -558,6 +559,23 @@ elif page == "🚨 Incident Center":
                 🚨 ACTIVE INCIDENT: {domain} — {issue} | {len(group)} tickets affected | {severity} | Avg Score: {avg_score:.0f}
             </div>
             """, unsafe_allow_html=True)
+            
+            # RCA Box
+            rca_reports = load_rca_reports()
+            rca_match = None
+            for r_id, r_data in rca_reports.items():
+                if r_data['domain'] == domain:
+                    rca_match = r_data
+                    break
+            
+            if rca_match:
+                st.markdown(f"""
+                <div style="background-color: #1a1a2e; padding: 16px; border-radius: 8px; border-left: 4px solid #e94560; margin-bottom: 12px; font-family: 'Inter', sans-serif;">
+                    <h4 style="margin-top:0; color: #ff6b6b; font-size: 1.1rem;">🔬 Auto-Generated Root Cause Analysis (RCA)</h4>
+                    <p style="color: #c9d1d9; margin-bottom: 8px;"><strong>Probable Cause:</strong> {rca_match['probable_cause']}</p>
+                    <p style="color: #c9d1d9; margin-bottom: 0;"><strong>Suggested Mitigation:</strong><br>{rca_match['mitigation'].replace(chr(10), '<br>')}</p>
+                </div>
+                """, unsafe_allow_html=True)
             
             with st.expander(f"📋 View {len(group)} affected tickets", expanded=True):
                 st.dataframe(

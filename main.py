@@ -7,6 +7,7 @@ from logger import log_ticket
 from pattern_detector import detect_incidents
 from learning_memory import update_memory
 from ml_model import train_model, get_model_info
+from rca_engine import generate_rca
 
 from rich.console import Console
 from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn
@@ -125,6 +126,10 @@ def main():
                 response = get_response(domain, issue_type, severity, is_incident=True)
                 
                 console.print(f"🚨 [bold red]DETECTED INCIDENT:[/bold red] {incident_name} ({volume} tickets affected) -> {domain} - {issue_type} [{severity}] [source: {source}]")
+                
+                incident_tickets = [ticket_map[tid] for tid in ticket_ids]
+                rca = generate_rca(incident_name, domain, incident_tickets)
+                console.print(f"   [dim cyan]🔬 RCA Generated: {rca['probable_cause']}[/dim cyan]")
                 
                 for tid in ticket_ids:
                     t_text = ticket_map[tid]['user_query']

@@ -1,0 +1,10 @@
+{
+    "Incident_Group_0": {
+        "incident_id": "Incident_Group_0",
+        "domain": "HackerRank",
+        "affected_tickets": 2,
+        "probable_cause": "Auth service rate-limiter over-triggering or Redis cache failure.",
+        "mitigation": "1. Check Redis memory usage.\n2. Temporarily increase rate-limit thresholds.\n3. Manually unlock affected user batches.",
+        "status": "Investigating"
+    }
+}
