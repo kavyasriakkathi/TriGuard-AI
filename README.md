@@ -1,86 +1,129 @@
-# Features
+# 🛡️ TriGuard AI — Intelligent Incident Auto-Grouping & Routing Engine
 
-- **Priority Score (0-100)**: Calculated from severity and issue type, stored in `output.csv` and shown in logs.
-- **Auto Escalation Rule**: Tickets with a priority score > 80 are automatically escalated to human support.
-- **Professional Logs**: Structured audit logs with timestamp, domain, issue, score, status, and response, differentiating alerts for escalations.
-- **System Dashboard Summary**: At the end of each run, a concise summary shows totals for processed tickets, escalations, automated replies, duplicates, and file locations.
+An AI-driven, self-improving incident management platform built in Python. TriGuard AI transforms static ticket classification into an intelligent system that automatically detects patterns, groups related tickets into incidents, and dynamically calculates severity using real-time signals.
 
+---
 
-A professional terminal-based support ecosystem built in Python. TriGuard AI automatically processes user support tickets, classifies the platform, assesses priority scores, and intelligently routes high-risk cases to human agents while automating standard responses.
+## 🚀 The 5 Core AI Features
 
-Crucially, TriGuard AI features **Severity-Based Prioritization**. High-risk issues (like payment failures or potential fraud) are instantly escalated, while low and medium risk issues receive automated, helpful responses, drastically improving support efficiency.
+### 1. 🧠 AI Learning Behavior Layer (Feedback Loop)
+- Implements a **reinforcement-style memory system** that learns from human agent corrections.
+- When an agent corrects a ticket's classification, the system remembers it (`ticket_memory.json`).
+- On future similar tickets, the AI instantly recalls the corrected classification with **100% confidence**.
+- **File:** `learning_memory.py`
 
-## Features
+### 2. 📊 Log Analytics Engine (Anomaly Detection)
+- Parses historical ticket logs to detect **system-wide anomalies** and sudden ticket bursts.
+- Monitors for spikes in specific domains (e.g., Payment gateway timeout spikes).
+- Anomaly signals are fed back into the **Dynamic Severity Engine** to boost priority scores.
+- **File:** `logger.py` → `analyze_system_health()`
 
-- **Multi-Domain Support**: Seamlessly handles tickets for HackerRank, AI Tools, and Payments.
-- **Smart Classification**: Detects the issue type (e.g., Login Issue, Submission Issue, Transaction Failure) based on keyword heuristics.
-- **Severity-Based Prioritization**:
-  - `🚨 High`: Critical issues (payment failure, money deducted, fraud). Requires immediate human escalation.
-  - `⚠️ Medium`: Errors, failures, API downtime.
-  - `✅ Low`: General or minor queries.
-- **Automated Logging**: All tickets, along with their classification and generated response, are securely logged into a structured JSON file (`logs.json`) with accurate timestamps.
-- **Modular Architecture**: Clean, readable, and highly extensible code structure.
+### 3. 🔍 Smart Pattern Detection & Clustering (Bug Outbreak Detection)
+- Uses **TF-IDF vectorization** + **DBSCAN clustering** to identify groups of similar tickets.
+- Automatically detects when multiple users report the same issue (bug outbreaks).
+- Falls back to simple text matching if `scikit-learn` is unavailable.
+- **File:** `pattern_detector.py`
 
-## Folder Structure
+### 4. ⚡ Dynamic Severity Engine (Real-Time Priority Scoring)
+- Replaces static severity rules with a **dynamic scoring system (0–100)**.
+- Factors include:
+  - **Financial Impact** — Payment-related tickets get higher base scores; fraud keywords escalate further.
+  - **Keyword Urgency** — Words like "failed", "critical", "crash" boost scores.
+  - **System Health Signals** — Log anomalies (from Feature #2) increase priority dynamically.
+  - **Incident Volume Scaling** — More tickets in a cluster = higher severity (from Feature #3).
+- Severity mapping: `SEV-1 (≥80)` → `SEV-2 (≥50)` → `SEV-3 (≥20)` → `SEV-4 (<20)`
+- **File:** `classifier.py` → `process_ticket()`
+
+### 5. 🚨 Automated Incident Grouping & Routing
+- Clusters related tickets into **named incidents** (e.g., `Incident_Group_0`).
+- Processes incident groups as a **single batch** instead of individual tickets.
+- Automatically escalates high-priority incidents (`score ≥ 80`) to the incident response team.
+- Standalone tickets are routed normally (auto-reply or human escalation).
+- **File:** `main.py`
+
+---
+
+## 📁 Project Structure
 
 ```
-TriGuard Ai/
+TriGuard AI/
 │
-├── main.py             # Entry point and terminal interface orchestration
-├── classifier.py       # Logic for domain, issue, and severity classification
-├── responder.py        # Logic for fetching responses and handling escalations
-├── logger.py           # Logic for writing detailed ticket decisions to logs.json
-├── responses.json      # Structured dictionary of domain-specific responses
-├── .gitignore          # Keeps your repository clean from logs and environments
-└── README.md           # Project documentation
+├── main.py                 # Entry point — orchestrates the full pipeline
+├── classifier.py           # Dynamic Severity Engine + AI classification
+├── pattern_detector.py     # TF-IDF + DBSCAN clustering for incident detection
+├── responder.py            # Automated response generation
+├── logger.py               # Audit logging + Log Analytics Engine
+├── learning_memory.py      # AI Learning Behavior (Feedback Loop)
+├── responses.json          # Domain-specific response templates
+├── support_issue.csv       # Input: support tickets to process
+├── requirements.txt        # Python dependencies
+├── install_dependencies.bat # One-click Windows dependency installer
+├── .gitignore              # Clean repo (excludes logs, cache, output)
+└── README.md               # This file
 ```
 
-## How to Run
+---
 
-1. Ensure you have Python 3 installed on your system.
-2. Clone this repository to your local machine.
-3. Navigate into the project directory.
-4. Run the main script:
-   ```bash
-   python main.py
-   ```
-5. Enter your support tickets when prompted.
-6. Type `exit` or `quit` to stop the application.
+## ⚙️ How to Run
 
-## Example Inputs & Outputs
+### Prerequisites
+- Python 3.10+ installed ([Download Python](https://www.python.org/downloads/))
+- Git installed ([Download Git](https://git-scm.com/download/win))
 
-**Input 1:**
-```
-Enter the support ticket: My payment failed but money was deducted from my account!
-```
-**Output 1:**
-```
-==================================================
-📊 TRIAGE RESULT
-==================================================
-Domain:      Payments
-Issue Type:  Transaction Failed
-Severity:    🚨 [HIGH RISK] 🚨
---------------------------------------------------
-💬 SUGGESTED RESPONSE:
-[ESCALATION REQUIRED] This is a critical Transaction Failed in Payments. Forwarding to the human support team immediately.
-==================================================
+### Installation
+```bash
+# Clone the repository
+git clone https://github.com/kavyasriakkathi/TriGuard-AI.git
+cd TriGuard-AI
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-**Input 2:**
+### Run the Engine
+```bash
+python main.py
 ```
-Enter the support ticket: I can't login to my HackerRank account
+
+---
+
+## 📊 Sample Output
+
 ```
-**Output 2:**
+TriGuard AI: Intelligent Incident Auto-Grouping & Routing Engine
+─────────────────────────────────────────────────────────────────
+Running Smart Pattern Detection & Clustering...
+
+🚨 DETECTED INCIDENT: Incident_Group_0 (2 tickets affected) -> HackerRank - Login Issue [SEV-4]
+Ticket #2: [Score: 60] [SEV-2] [Auto-Replied]
+Ticket #3: [Score: 0]  [SEV-4] [Auto-Replied]
+
+─────────────────────────────────────────────────────────────────
+SYSTEM DASHBOARD SUMMARY
+─────────────────────────────────────────────────────────────────
+Total Tickets Processed : 6
+Total Incidents Detected: 1
+Human Escalations       : 0
+Automated Replies       : 6
+Data Saved To           : output.csv
+Audit Logs Appended     : logs.json
+─────────────────────────────────────────────────────────────────
+Process Complete. System Standby.
 ```
-==================================================
-📊 TRIAGE RESULT
-==================================================
-Domain:      HackerRank
-Issue Type:  Login Issue
-Severity:    ✅ [LOW RISK]
---------------------------------------------------
-💬 SUGGESTED RESPONSE:
-Please check your HackerRank username/password or reset your password.
-==================================================
-```
+
+---
+
+## 🛠️ Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| Language | Python 3.14 |
+| ML/Clustering | scikit-learn (TF-IDF, DBSCAN) |
+| Terminal UI | Rich (progress bars, styled output) |
+| Data | CSV (input), JSON (logs, memory, responses) |
+
+---
+
+## 📄 License
+
+This project is open source and available for educational and demonstration purposes.
