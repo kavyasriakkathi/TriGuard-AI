@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+logs.json
+log.txt
+output.csv
+support_issues.csv
+.venv/
+venv/
+env/
+.env

@@ -1,0 +1,15 @@
+{
+    "Payments": {
+        "Transaction Failed": "Please ensure your card has sufficient funds or try another payment method. If money was deducted, it will be refunded within 3-5 business days.",
+        "Billing Query": "You can view your invoice history from the Billing Dashboard."
+    },
+    "HackerRank": {
+        "Login Issue": "Please try resetting your password using the 'Forgot Password' link."
+    },
+    "AI Tools": {
+        "API Downtime": "We are aware of degraded performance and are investigating. Please check our status page."
+    },
+    "General": {
+        "Unknown Issue": "Thank you for reaching out. A support representative will review your request shortly."
+    }
+}

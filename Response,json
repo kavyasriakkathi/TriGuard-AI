@@ -1,0 +1,20 @@
+{
+    "HackerRank": {
+    "Login Issue": "Reset your HackerRank password or check credentials.",
+    "Submission Issue": "Check input/output format and compilation errors.",
+    "Test Case Issue": "Verify edge cases and constraints.",
+    "General Issue": "Please describe your HackerRank issue clearly."
+  },
+
+  "AI Tool": {
+    "API Error": "Check your API key and request format.",
+    "Login Issue": "Try re-authenticating or resetting credentials.",
+    "General Issue": "Check tool documentation or logs."
+  },
+
+  "Payments": {
+    "Transaction Failed": "Check your balance or payment gateway status.",
+    "Refund Issue": "Refunds usually take 3-5 business days.",
+    "General Issue": "Contact support with transaction details."
+  }
+}

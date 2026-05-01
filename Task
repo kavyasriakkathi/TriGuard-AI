@@ -1,0 +1,8 @@
+[x]Create robust classifier.py for domain, issue, and severity classification.
+[x] Create responder.py to interface with responses.json.
+[x] Create logger.py to handle structured JSON logging (logs.json).
+[x] Refactor main.py to serve as the main CLI entry point.
+[x] Create .gitignore to exclude logs.json, __pycache__, and .venv.
+[x] Create professional README.md for GitHub.
+[x] Test the system.
+[x] Generate walkthrough.md for the user.

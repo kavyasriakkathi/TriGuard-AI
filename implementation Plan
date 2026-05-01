@@ -1,0 +1,44 @@
+TriGuard AI: Multi-Domain Support Triage Agent
+Hackathon Implementation Plan
+This plan outlines the complete restructuring of TriGuard AI to perfectly match your hackathon problem statement. We will transition from a simple script to a robust, professional, and entirely unique terminal-based agent.
+
+User Review Required
+IMPORTANT
+
+Since this is for a hackathon, we want to ensure the architecture is impressive. I propose using the rich Python library to make the terminal output look extremely professional and colorful.
+
+The application will primarily be a terminal-based CLI application as requested, outputting to CSV and log files.
+
+Please review the architecture below. If approved, I will build out the entire system.
+
+Proposed Architecture
+We will organize the code cleanly to show software engineering best practices.
+
+1. Core Logic Modules
+[NEW] 
+classifier.py
+Analyzes ticket text to identify domain, issue type, risk level, and escalation needs.
+[NEW] 
+responder.py
+Retrieves documentation and formats safe responses.
+[NEW] 
+logger.py
+Handles detailed decision logging for transparency.
+2. Main Entry Point & Outputs
+[MODIFY] 
+main.py
+The main CLI loop handling inputs, classification, CSV writing, and logging.
+[NEW] 
+corpus.json
+The support documentation corpus.
+3. Professional Documentation
+[NEW] 
+README.md
+Highly professional README with architecture, setup, and usage instructions.
+[NEW] 
+.gitignore
+To ignore CSVs, logs, and venvs from GitHub.
+Verification Plan
+I will write and link all these modules.
+I will run the agent with test cases to verify outputs and CSV/Log generation.
+I will give you the git commands to upload your winning project!

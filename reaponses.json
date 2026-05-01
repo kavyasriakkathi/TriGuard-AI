@@ -1,0 +1,28 @@
+{
+  "HackerRank": {
+    "Login Issue": "Please check your HackerRank username/password or reset your password.",
+    "Submission Issue": "Check input/output format and ensure your code compiles correctly on the HackerRank IDE.",
+    "Test Case Issue": "Verify edge cases and constraints in your solution. Hidden test cases often check for performance.",
+    "General Issue": "Please provide more details about your HackerRank issue."
+  },
+  "AI Tools": {
+    "Login Issue": "Please ensure you are using the correct Single Sign-On (SSO) credentials for the AI Tool.",
+    "API Error": "Check your API key. Ensure you haven't exceeded rate limits or check the service status page.",
+    "General Issue": "Please provide more details about the AI Tool issue."
+  },
+  "Payments": {
+    "Login Issue": "Please ensure you are securely logged into your payment portal.",
+    "Transaction Failed": "Check if your card is valid and has sufficient balance. If money was deducted, it will be refunded automatically within 24 hours.",
+    "Refund Issue": "Refunds take 5-7 business days to reflect in your account. Please check your bank statement.",
+    "General Issue": "Please provide your transaction ID for further assistance."
+  },
+  "Unknown Domain": {
+    "Login Issue": "Please specify the platform you are trying to access.",
+    "Submission Issue": "Please specify where you are submitting your code.",
+    "Test Case Issue": "Please specify the platform for the test cases.",
+    "API Error": "Please provide the endpoint and the platform you are integrating with.",
+    "Transaction Failed": "Please provide your transaction ID and the payment platform.",
+    "Refund Issue": "Please provide your transaction ID.",
+    "General Issue": "Please provide more details about your issue and the platform involved."
+  }
+}
