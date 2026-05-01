@@ -3,7 +3,11 @@ __pycache__/
 logs.json
 log.txt
 output.csv
-support_issues.csv
+support_issue.csv
+ticket_memory.json
+rca_reports.json
+training_log.json
+triguard_model.pkl
 .venv/
 venv/
 env/
