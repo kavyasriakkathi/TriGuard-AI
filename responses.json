@@ -1,13 +1,30 @@
 {
     "Payments": {
         "Transaction Failed": "Please ensure your card has sufficient funds or try another payment method. If money was deducted, it will be refunded within 3-5 business days.",
-        "Billing Query": "You can view your invoice history from the Billing Dashboard."
+        "Billing Query": "You can view your invoice history from the Billing Dashboard.",
+        "Refund Delay": "Refunds typically take 5-7 business days. If it has been longer, please share your transaction ID and we will expedite the process.",
+        "Duplicate Charge": "We apologize for the duplicate charge. Our billing team has been notified and will process a reversal within 24-48 hours."
     },
     "HackerRank": {
-        "Login Issue": "Please try resetting your password using the 'Forgot Password' link."
+        "Login Issue": "Please try resetting your password using the 'Forgot Password' link.",
+        "Account Locked": "Your account has been temporarily locked for security. Please wait 30 minutes or contact support to unlock it immediately.",
+        "Password Reset Issue": "Please check your spam/junk folder for the password reset email. If not found, try requesting a new reset link."
     },
     "AI Tools": {
-        "API Downtime": "We are aware of degraded performance and are investigating. Please check our status page."
+        "API Downtime": "We are aware of degraded performance and are investigating. Please check our status page.",
+        "Application Crash": "We have logged this crash report. Please try clearing your cache and restarting the application. If the issue persists, our engineering team will investigate.",
+        "Server Error": "Our servers are experiencing issues. Our infrastructure team is working on a fix. Please check our status page for live updates."
+    },
+    "Security": {
+        "Account Compromise": "[CRITICAL] Your account has been flagged for immediate review. We recommend changing your password immediately and enabling two-factor authentication (2FA).",
+        "Suspicious Activity": "We have detected unusual activity on your account. As a precaution, please verify your recent login history and update your password.",
+        "Phishing Report": "Thank you for reporting this. Our security team will investigate the phishing attempt. Please do not click on any suspicious links.",
+        "Security Concern": "Your security concern has been escalated to our cybersecurity team. We recommend enabling 2FA and reviewing your account permissions."
+    },
+    "Performance": {
+        "Database Slowdown": "Our database team is investigating the performance degradation. We are scaling resources to improve query response times.",
+        "Page Load Delay": "We are aware of slow page loads and are optimizing our content delivery. Please try clearing your browser cache in the meantime.",
+        "General Slowdown": "We are monitoring system performance and working to resolve the slowdown. Thank you for your patience."
     },
     "General": {
         "Unknown Issue": "Thank you for reaching out. A support representative will review your request shortly."

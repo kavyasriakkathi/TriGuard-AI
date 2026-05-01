@@ -42,9 +42,15 @@ def analyze_system_health():
                            if log.get('classification', {}).get('domain') == 'Payments' 
                            and log.get('classification', {}).get('issue_type') == 'Transaction Failed')
     
+    # Security incident detection
+    security_incidents = sum(1 for log in recent_logs
+                             if log.get('classification', {}).get('domain') == 'Security')
+    
     anomalies = []
     # Spike detection
     if payment_failures >= 3:
         anomalies.append("Payment gateway timeout spikes detected")
+    if security_incidents >= 3:
+        anomalies.append("Multiple security incidents detected")
         
     return anomalies

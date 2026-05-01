@@ -5,14 +5,41 @@ from classifier import process_ticket
 from responder import get_response
 from logger import log_ticket
 from pattern_detector import detect_incidents
+from learning_memory import update_memory
 
 from rich.console import Console
 from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn
+from rich.table import Table
 
 console = Console()
 
 def print_separator():
     console.rule()
+
+def run_feedback_loop():
+    """
+    AI Learning Behavior Layer — Feedback Loop
+    Allows human agents to correct misclassifications so the AI learns for next time.
+    """
+    console.print("\n[bold yellow]🧠 AI FEEDBACK LOOP — Train the System[/bold yellow]")
+    console.rule()
+    console.print("Correct a past classification so the AI remembers it next time.")
+    console.print("Type [bold]'skip'[/bold] to skip.\n")
+    
+    ticket_text = input("Enter the ticket text to correct: ").strip()
+    if ticket_text.lower() == 'skip':
+        return
+    
+    domain = input("Correct Domain (e.g., Payments, Security, HackerRank, AI Tools, Performance): ").strip()
+    issue_type = input("Correct Issue Type (e.g., Transaction Failed, Account Compromise): ").strip()
+    severity = input("Correct Severity (SEV-1, SEV-2, SEV-3, SEV-4): ").strip().upper()
+    
+    if domain and issue_type and severity:
+        update_memory(ticket_text, domain, issue_type, severity)
+        console.print(f"\n[green]✅ Memory updated! The AI will now classify similar tickets as:[/green]")
+        console.print(f"   Domain: {domain} | Issue: {issue_type} | Severity: {severity}")
+    else:
+        console.print("[red]Invalid input. Skipping feedback.[/red]")
 
 def main():
     console.print("[bold cyan]TriGuard AI: Intelligent Incident Auto-Grouping & Routing Engine[/bold cyan]")
@@ -131,18 +158,29 @@ def main():
                     console.print(f"Ticket #{tid}: [Score: {priority_score}] [{severity}] [Auto-Replied]", style="green")
                 progress.advance(task)
 
+    # Dashboard Summary
     print_separator()
     console.print("[bold]SYSTEM DASHBOARD SUMMARY[/bold]")
     console.rule()
-    console.print(f"Total Tickets Processed : {processed_count}")
-    console.print(f"Total Incidents Detected: {len(incidents)}")
-    console.print(f"Human Escalations       : {escalated_count}")
-    console.print(f"Automated Replies       : {replied_count}")
-    console.print(f"Data Saved To           : {output_csv}")
-    console.print(f"Audit Logs Appended     : logs.json")
+    
+    # Rich Table for summary
+    summary_table = Table(show_header=False, box=None, padding=(0, 2))
+    summary_table.add_column("Metric", style="cyan")
+    summary_table.add_column("Value", style="white bold")
+    summary_table.add_row("Total Tickets Processed", str(processed_count))
+    summary_table.add_row("Total Incidents Detected", str(len(incidents)))
+    summary_table.add_row("Human Escalations", str(escalated_count))
+    summary_table.add_row("Automated Replies", str(replied_count))
+    summary_table.add_row("Data Saved To", output_csv)
+    summary_table.add_row("Audit Logs Appended", "logs.json")
+    console.print(summary_table)
+    
     console.rule()
     console.print("Process Complete. System Standby.", style="magenta")
     console.rule()
+    
+    # 5. AI Feedback Loop — Let agents correct classifications
+    run_feedback_loop()
 
 if __name__ == "__main__":
     try:
