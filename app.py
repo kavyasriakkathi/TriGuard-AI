@@ -523,21 +523,32 @@ elif page == "🤖 AI Response Generator":
             new_df = pd.DataFrame([new_row])
             new_df.to_csv("output.csv", mode='a', header=False, index=False)
             
+            # --- 🧠 PERSISTENCE: Save result to session state ---
+            st.session_state.last_result = {
+                "domain": domain,
+                "issue_type": issue_type,
+                "severity": severity,
+                "priority_score": priority_score,
+                "business_risk": business_risk,
+                "ai_response": ai_response
+            }
+            
             # Clear cache to force UI update
             st.cache_data.clear()
             st.rerun()
+    
+    # --- 🎯 Display Classification Result (From Session State) ---
+    if "last_result" in st.session_state:
+        res = st.session_state.last_result
+        severity = res['severity']
         
-        with col2:
-            st.markdown("### 🎯 Classification Result")
-            
-            sev_color = "#e94560" if severity == "SEV-1" else "#ffd43b" if severity == "SEV-2" else "#4dabf7" if severity == "SEV-3" else "#51cf66"
-            
-            mc1, mc2, mc3, mc4, mc5 = st.columns(5)
-            mc1.metric("Domain", domain)
-            mc2.metric("Issue Type", issue_type)
-            mc3.metric("Severity", severity)
-            mc4.metric("Score", f"{priority_score}/100")
-            mc5.metric("💰 Risk/hr", f"${business_risk:,.0f}", delta="-High" if severity=="SEV-1" else None, delta_color="inverse")
+        st.markdown("### 🎯 Classification Result")
+        mc1, mc2, mc3, mc4, mc5 = st.columns(5)
+        mc1.metric("Domain", res['domain'])
+        mc2.metric("Issue Type", res['issue_type'])
+        mc3.metric("Severity", severity)
+        mc4.metric("Score", f"{res['priority_score']}/100")
+        mc5.metric("💰 Risk/hr", f"${res['business_risk']:,.0f}", delta="-High" if severity=="SEV-1" else None, delta_color="inverse")
         
         st.markdown("---")
         
@@ -551,14 +562,14 @@ elif page == "🤖 AI Response Generator":
         st.markdown("---")
         
         st.markdown("### 💬 AI-Generated Response")
-        st.markdown(f'<div class="ai-response-box">{ai_response}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="ai-response-box">{res["ai_response"]}</div>', unsafe_allow_html=True)
         
         st.markdown("")
         copy_col1, copy_col2 = st.columns(2)
         with copy_col1:
             st.download_button(
                 "📋 Download Response",
-                ai_response,
+                res["ai_response"],
                 file_name=f"response_ticket.txt",
                 mime="text/plain",
                 use_container_width=True
