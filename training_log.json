@@ -1,32 +1,34 @@
 {
-    "training_samples": 61,
+    "training_samples": 62,
     "seed_samples": 61,
-    "feedback_samples": 0,
+    "feedback_samples": 1,
     "domains": [
-        "Payments",
-        "AI Tools",
-        "Security",
         "Performance",
+        "AI Tools",
+        "5",
+        "General",
+        "Security",
         "HackerRank",
-        "General"
+        "Payments"
     ],
     "issue_types": [
+        "Login Issue",
         "Billing Query",
+        "Account Locked",
+        "Application Crash",
+        "3",
+        "Transaction Failed",
+        "Password Reset Issue",
         "General Slowdown",
+        "Server Error",
+        "Account Compromise",
+        "API Downtime",
         "Refund Delay",
         "Page Load Delay",
         "Database Slowdown",
-        "Account Locked",
-        "Account Compromise",
-        "API Downtime",
-        "Password Reset Issue",
-        "Login Issue",
-        "Application Crash",
         "Suspicious Activity",
-        "Duplicate Charge",
         "Phishing Report",
-        "Server Error",
-        "Unknown Issue",
-        "Transaction Failed"
+        "Duplicate Charge",
+        "Unknown Issue"
     ]
 }
