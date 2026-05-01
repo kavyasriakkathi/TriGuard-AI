@@ -3,32 +3,32 @@
     "seed_samples": 61,
     "feedback_samples": 1,
     "domains": [
+        "General",
+        "Payments",
+        "5",
         "Performance",
         "AI Tools",
-        "5",
-        "General",
-        "Security",
         "HackerRank",
-        "Payments"
+        "Security"
     ],
     "issue_types": [
         "Login Issue",
-        "Billing Query",
         "Account Locked",
-        "Application Crash",
+        "Account Compromise",
+        "Duplicate Charge",
         "3",
         "Transaction Failed",
-        "Password Reset Issue",
-        "General Slowdown",
-        "Server Error",
-        "Account Compromise",
-        "API Downtime",
         "Refund Delay",
-        "Page Load Delay",
-        "Database Slowdown",
-        "Suspicious Activity",
         "Phishing Report",
-        "Duplicate Charge",
-        "Unknown Issue"
+        "Server Error",
+        "Application Crash",
+        "Page Load Delay",
+        "Password Reset Issue",
+        "Database Slowdown",
+        "Unknown Issue",
+        "General Slowdown",
+        "API Downtime",
+        "Suspicious Activity",
+        "Billing Query"
     ]
 }
