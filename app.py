@@ -241,6 +241,14 @@ if page == "📊 Live Dashboard":
     </div>
     """, unsafe_allow_html=True)
     
+    # --- 🔥 WOW FEATURE: Instant Incident Detection Banner ---
+    from collections import Counter
+    query_counts = Counter(df['user_query'].astype(str))
+    for query_text, count in query_counts.items():
+        if count >= 2:
+            st.error(f"🚨 **System Auto-Detection:** Multiple outages detected! The issue *'{query_text}'* has been reported {count} times.")
+
+    
     # --- Metric Cards ---
     total_tickets = len(df)
     sev1_count = len(df[df['severity'] == 'SEV-1'])
