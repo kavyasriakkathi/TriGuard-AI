@@ -148,12 +148,20 @@ st.markdown("""
     /* Sidebar */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0f0c29 0%, #1a1a2e 100%);
+        min-width: 300px !important;
+        max-width: 300px !important;
+    }
+    
+    /* Force Toggle Button Visibility */
+    [data-testid="stSidebarCollapseButton"] {
+        background-color: #e94560 !important;
+        color: white !important;
+        border-radius: 50% !important;
     }
     
     /* Hide Streamlit branding */
     #MainMenu { visibility: hidden; }
     footer { visibility: hidden; }
-    header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -497,6 +505,27 @@ elif page == "🤖 AI Response Generator":
             priority_score = classification['priority_score']
             
             ai_response, business_risk = generate_ai_response(domain, issue_type, severity, ticket_text)
+            
+            # --- 🔗 THE MISSING LINK: Save to Global Data ---
+            new_row = {
+                'ticket_id': f"GEN-{int(time.time())}",
+                'user_query': ticket_text,
+                'domain': domain,
+                'issue_type': issue_type,
+                'severity': severity,
+                'priority_score': priority_score,
+                'action': ESCALATION_RULES.get(severity, ESCALATION_RULES["SEV-4"])['action'],
+                'response': ai_response,
+                'source': classification.get('source', 'ml_model')
+            }
+            
+            # Append to CSV
+            new_df = pd.DataFrame([new_row])
+            new_df.to_csv("output.csv", mode='a', header=False, index=False)
+            
+            # Clear cache to force UI update
+            st.cache_data.clear()
+            st.rerun()
         
         with col2:
             st.markdown("### 🎯 Classification Result")
