@@ -8,11 +8,14 @@ def load_memory():
         return {}
     with open(MEMORY_FILE, 'r', encoding='utf-8') as f:
         try:
-            return json.load(f)
-        except json.JSONDecodeError:
+            data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except (json.JSONDecodeError, TypeError):
             return {}
 
 def save_memory(memory):
+    if not isinstance(memory, dict):
+        return
     with open(MEMORY_FILE, 'w', encoding='utf-8') as f:
         json.dump(memory, f, indent=4)
 
@@ -20,9 +23,14 @@ def update_memory(ticket_text, human_domain, human_issue, human_severity):
     """
     Simulates Reinforcement-style scoring feedback loop
     """
+    if not ticket_text:
+        return
+        
     memory = load_memory()
-    # Keyed by lowercase ticket text for simplicity
-    memory[ticket_text.lower()] = {
+    # Ensure key is a clean lowercase string
+    key = str(ticket_text).strip().lower()
+    
+    memory[key] = {
         "domain": human_domain,
         "issue_type": human_issue,
         "severity": human_severity,
@@ -34,5 +42,9 @@ def check_memory(ticket_text):
     """
     Returns the mapped classification if a human has corrected it before.
     """
+    if not ticket_text:
+        return None
+        
     memory = load_memory()
-    return memory.get(ticket_text.lower(), None)
+    key = str(ticket_text).strip().lower()
+    return memory.get(key, None)
