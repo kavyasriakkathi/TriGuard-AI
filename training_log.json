@@ -1,0 +1,32 @@
+{
+    "training_samples": 61,
+    "seed_samples": 61,
+    "feedback_samples": 0,
+    "domains": [
+        "Payments",
+        "AI Tools",
+        "Security",
+        "Performance",
+        "HackerRank",
+        "General"
+    ],
+    "issue_types": [
+        "Billing Query",
+        "General Slowdown",
+        "Refund Delay",
+        "Page Load Delay",
+        "Database Slowdown",
+        "Account Locked",
+        "Account Compromise",
+        "API Downtime",
+        "Password Reset Issue",
+        "Login Issue",
+        "Application Crash",
+        "Suspicious Activity",
+        "Duplicate Charge",
+        "Phishing Report",
+        "Server Error",
+        "Unknown Issue",
+        "Transaction Failed"
+    ]
+}

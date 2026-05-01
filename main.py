@@ -6,10 +6,12 @@ from responder import get_response
 from logger import log_ticket
 from pattern_detector import detect_incidents
 from learning_memory import update_memory
+from ml_model import train_model, get_model_info
 
 from rich.console import Console
 from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
+from rich.panel import Panel
 
 console = Console()
 
@@ -28,7 +30,7 @@ def run_feedback_loop():
     
     ticket_text = input("Enter the ticket text to correct: ").strip()
     if ticket_text.lower() == 'skip':
-        return
+        return False
     
     domain = input("Correct Domain (e.g., Payments, Security, HackerRank, AI Tools, Performance): ").strip()
     issue_type = input("Correct Issue Type (e.g., Transaction Failed, Account Compromise): ").strip()
@@ -38,19 +40,39 @@ def run_feedback_loop():
         update_memory(ticket_text, domain, issue_type, severity)
         console.print(f"\n[green]✅ Memory updated! The AI will now classify similar tickets as:[/green]")
         console.print(f"   Domain: {domain} | Issue: {issue_type} | Severity: {severity}")
+        
+        # Trigger auto-retraining with the new feedback
+        console.print("[yellow]🔄 Auto-retraining ML model with new feedback...[/yellow]")
+        log = train_model(force=True)
+        if log:
+            console.print(f"[green]✅ Model retrained! Total training samples: {log['training_samples']} (Seed: {log['seed_samples']}, Feedback: {log['feedback_samples']})[/green]")
+        return True
     else:
         console.print("[red]Invalid input. Skipping feedback.[/red]")
+        return False
 
 def main():
-    console.print("[bold cyan]TriGuard AI: Intelligent Incident Auto-Grouping & Routing Engine[/bold cyan]")
+    console.print(Panel.fit(
+        "[bold cyan]🛡️ TriGuard AI: Intelligent Incident Auto-Grouping & Routing Engine[/bold cyan]\n"
+        "[dim]Powered by TF-IDF + SVM Machine Learning[/dim]",
+        border_style="cyan"
+    ))
+
+    # Step 2 & 3: Train/Load the ML Model
+    console.print("[yellow]🤖 Initializing ML Classification Model...[/yellow]")
+    training_log = train_model()
+    model_info = get_model_info()
+    if model_info:
+        console.print(f"[green]✅ Model ready — {model_info['training_samples']} training samples ({model_info['seed_samples']} seed + {model_info['feedback_samples']} feedback)[/green]")
+    else:
+        console.print("[green]✅ Model trained and ready.[/green]")
     console.rule()
 
-    input_csv = "support_issue.csv" # Changed to match actual file in directory
+    input_csv = "support_issue.csv"
     output_csv = "output.csv"
 
     if not os.path.exists(input_csv):
         console.print(f"[red]Error: Could not find {input_csv}. Please make sure it exists.[/red]")
-        # Create dummy file if missing just to let the user see it work
         with open(input_csv, 'w', encoding='utf-8', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=['ticket_id', 'user_query'])
             writer.writeheader()
@@ -66,8 +88,8 @@ def main():
             return
         rows = list(reader)
 
-    # Incident Auto-Grouping System
-    console.print("[yellow]Running Smart Pattern Detection & Clustering...[/yellow]")
+    # Step 5: Incident Auto-Grouping (Pattern Detection)
+    console.print("[yellow]🔍 Running Smart Pattern Detection & Clustering...[/yellow]")
     incidents, standalone_ids = detect_incidents(rows)
     
     ticket_map = {row['ticket_id']: row for row in rows}
@@ -75,7 +97,7 @@ def main():
     processed_count = escalated_count = replied_count = 0
 
     with open(output_csv, "w", encoding="utf-8", newline='') as outfile:
-        fieldnames = ['ticket_id', 'user_query', 'domain', 'issue_type', 'severity', 'priority_score', 'action', 'response']
+        fieldnames = ['ticket_id', 'user_query', 'domain', 'issue_type', 'severity', 'priority_score', 'action', 'response', 'source']
         writer = csv.DictWriter(outfile, fieldnames=fieldnames)
         writer.writeheader()
 
@@ -91,18 +113,18 @@ def main():
             for incident_name, ticket_ids in incidents.items():
                 volume = len(ticket_ids)
                 representative_ticket = ticket_map[ticket_ids[0]]
-                # Dynamic severity boosted by volume
                 classification = process_ticket(representative_ticket['user_query'], volume_multiplier=volume)
                 
                 domain = classification["domain"]
                 issue_type = classification["issue_type"]
                 severity = classification["severity"]
                 priority_score = classification["priority_score"]
+                source = classification.get("source", "ml_model")
                 
                 action = "ESCALATE TO INCIDENT RESPONSE" if priority_score >= 80 else "Automated Incident Reply"
                 response = get_response(domain, issue_type, severity, is_incident=True)
                 
-                console.print(f"🚨 [bold red]DETECTED INCIDENT:[/bold red] {incident_name} ({volume} tickets affected) -> {domain} - {issue_type} [{severity}]")
+                console.print(f"🚨 [bold red]DETECTED INCIDENT:[/bold red] {incident_name} ({volume} tickets affected) -> {domain} - {issue_type} [{severity}] [source: {source}]")
                 
                 for tid in ticket_ids:
                     t_text = ticket_map[tid]['user_query']
@@ -115,7 +137,8 @@ def main():
                         'severity': severity,
                         'priority_score': priority_score,
                         'action': action,
-                        'response': response
+                        'response': response,
+                        'source': source
                     })
                     processed_count += 1
                     if priority_score >= 80:
@@ -133,6 +156,7 @@ def main():
                 issue_type = classification["issue_type"]
                 severity = classification["severity"]
                 priority_score = classification["priority_score"]
+                source = classification.get("source", "ml_model")
                 
                 action = "ESCALATE TO HUMAN SUPPORT" if priority_score >= 80 else "Automated Reply"
                 response = get_response(domain, issue_type, severity, is_incident=False)
@@ -146,16 +170,17 @@ def main():
                     'severity': severity,
                     'priority_score': priority_score,
                     'action': action,
-                    'response': response
+                    'response': response,
+                    'source': source
                 })
                 
                 processed_count += 1
                 if priority_score >= 80:
                     escalated_count += 1
-                    console.print(f"Ticket #{tid}: [Score: {priority_score}] [{severity}] [AUTO-ESCALATED]", style="red")
+                    console.print(f"Ticket #{tid}: [Score: {priority_score}] [{severity}] [AUTO-ESCALATED] [source: {source}]", style="red")
                 else:
                     replied_count += 1
-                    console.print(f"Ticket #{tid}: [Score: {priority_score}] [{severity}] [Auto-Replied]", style="green")
+                    console.print(f"Ticket #{tid}: [Score: {priority_score}] [{severity}] [Auto-Replied] [source: {source}]", style="green")
                 progress.advance(task)
 
     # Dashboard Summary
@@ -163,7 +188,6 @@ def main():
     console.print("[bold]SYSTEM DASHBOARD SUMMARY[/bold]")
     console.rule()
     
-    # Rich Table for summary
     summary_table = Table(show_header=False, box=None, padding=(0, 2))
     summary_table.add_column("Metric", style="cyan")
     summary_table.add_column("Value", style="white bold")
@@ -171,6 +195,8 @@ def main():
     summary_table.add_row("Total Incidents Detected", str(len(incidents)))
     summary_table.add_row("Human Escalations", str(escalated_count))
     summary_table.add_row("Automated Replies", str(replied_count))
+    summary_table.add_row("ML Model Source", "TF-IDF + SVM (scikit-learn)")
+    summary_table.add_row("Training Samples", str(model_info['training_samples']) if model_info else "N/A")
     summary_table.add_row("Data Saved To", output_csv)
     summary_table.add_row("Audit Logs Appended", "logs.json")
     console.print(summary_table)
@@ -179,7 +205,7 @@ def main():
     console.print("Process Complete. System Standby.", style="magenta")
     console.rule()
     
-    # 5. AI Feedback Loop — Let agents correct classifications
+    # Step 1 & 3: Feedback Loop + Auto Retraining
     run_feedback_loop()
 
 if __name__ == "__main__":
