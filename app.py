@@ -1,4 +1,15 @@
 import streamlit as st
+
+# ============================
+# Page Config (Must be first!)
+# ============================
+st.set_page_config(
+    page_title="TriGuard AI",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 import pandas as pd
 import json
 import os
@@ -10,16 +21,6 @@ from plotly.subplots import make_subplots
 from responder import generate_ai_response, ESCALATION_RULES
 from classifier import process_ticket
 from rca_engine import load_rca_reports
-
-# ============================
-# Page Config
-# ============================
-st.set_page_config(
-    page_title="TriGuard AI",
-    page_icon="🛡️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # ============================
 # Custom CSS — Dark Premium Theme
