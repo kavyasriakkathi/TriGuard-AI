@@ -2,51 +2,169 @@ import streamlit as st
 import pandas as pd
 import json
 import os
+import time
+from datetime import datetime
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from responder import generate_ai_response, ESCALATION_RULES
+from classifier import process_ticket
 
+# ============================
+# Page Config
+# ============================
 st.set_page_config(
-    page_title="TriGuard AI Dashboard",
+    page_title="TriGuard AI — Command Center",
     page_icon="🛡️",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# --- Custom CSS ---
+# ============================
+# Custom CSS — Dark Premium Theme
+# ============================
 st.markdown("""
 <style>
-    .main { background-color: #0e1117; }
-    .metric-card {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        border: 1px solid #0f3460;
-        border-radius: 12px;
-        padding: 20px;
-        text-align: center;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    
+    .main { background-color: #0a0a0f; font-family: 'Inter', sans-serif; }
+    .stApp { background-color: #0a0a0f; }
+    
+    /* Header */
+    .hero-header {
+        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+        border: 1px solid rgba(255,255,255,0.05);
+        border-radius: 16px;
+        padding: 30px 40px;
+        margin-bottom: 24px;
+        position: relative;
+        overflow: hidden;
     }
-    .metric-value {
-        font-size: 2.5rem;
+    .hero-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(233,69,96,0.15) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .hero-title {
+        font-size: 2.2rem;
         font-weight: 800;
-        color: #e94560;
+        background: linear-gradient(90deg, #e94560, #ff6b6b, #ffd43b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+    }
+    .hero-subtitle {
+        color: #8888aa;
+        font-size: 1rem;
+        margin-top: 6px;
+    }
+    
+    /* Metric Cards */
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .metric-card {
+        background: linear-gradient(145deg, #12121a 0%, #1a1a2e 100%);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 14px;
+        padding: 22px 20px;
+        text-align: center;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .metric-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(233,69,96,0.15);
+    }
+    .metric-icon { font-size: 1.5rem; margin-bottom: 6px; }
+    .metric-value {
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin: 4px 0;
     }
     .metric-label {
-        font-size: 0.9rem;
-        color: #a0a0b0;
-        margin-top: 4px;
+        font-size: 0.75rem;
+        color: #6b6b8d;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
+    .val-red { color: #e94560; }
+    .val-green { color: #51cf66; }
+    .val-yellow { color: #ffd43b; }
+    .val-blue { color: #4dabf7; }
+    .val-purple { color: #cc5de8; }
+    
+    /* Incident Banner */
     .incident-banner {
-        background: linear-gradient(90deg, #e94560 0%, #0f3460 100%);
-        border-radius: 10px;
-        padding: 15px 20px;
+        background: linear-gradient(90deg, #e94560 0%, #c0392b 100%);
+        border-radius: 12px;
+        padding: 16px 24px;
         color: white;
-        font-weight: bold;
-        margin-bottom: 10px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 4px 15px rgba(233,69,96,0.3);
     }
+    
+    /* Health indicator */
+    .health-good { color: #51cf66; }
+    .health-warn { color: #ffd43b; }
+    .health-crit { color: #e94560; }
+    
+    /* Section headers */
+    .section-header {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #e0e0f0;
+        margin: 20px 0 12px 0;
+        padding-bottom: 8px;
+        border-bottom: 2px solid rgba(233,69,96,0.3);
+    }
+    
+    /* AI Response box */
+    .ai-response-box {
+        background: linear-gradient(145deg, #0d1117 0%, #161b22 100%);
+        border: 1px solid #30363d;
+        border-radius: 12px;
+        padding: 20px;
+        font-family: 'Inter', monospace;
+        font-size: 0.85rem;
+        line-height: 1.6;
+        color: #c9d1d9;
+        white-space: pre-wrap;
+    }
+    
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f0c29 0%, #1a1a2e 100%);
+    }
+    
+    /* Hide Streamlit branding */
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
+    header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- Load Data ---
+# ============================
+# Data Loading
+# ============================
+@st.cache_data(ttl=5)
 def load_output():
     if os.path.exists("output.csv"):
         return pd.read_csv("output.csv")
     return pd.DataFrame()
 
+@st.cache_data(ttl=5)
 def load_logs():
     if os.path.exists("logs.json"):
         with open("logs.json", "r", encoding="utf-8") as f:
@@ -56,124 +174,473 @@ def load_logs():
                 return []
     return []
 
-# --- Header ---
-st.markdown("# 🛡️ TriGuard AI — Incident Dashboard")
-st.markdown("*Real-time visualization of ticket processing, incidents, and system health.*")
-st.markdown("---")
+# ============================
+# Sidebar
+# ============================
+with st.sidebar:
+    st.markdown("## 🛡️ TriGuard AI")
+    st.markdown("**Command Center**")
+    st.markdown("---")
+    
+    page = st.radio("Navigate", [
+        "📊 Live Dashboard",
+        "🤖 AI Response Generator",
+        "🚨 Incident Center",
+        "📋 Ticket Explorer"
+    ], label_visibility="collapsed")
+    
+    st.markdown("---")
+    
+    # System Health Indicator
+    df = load_output()
+    if not df.empty:
+        sev1_count = len(df[df['severity'] == 'SEV-1'])
+        if sev1_count >= 5:
+            health = "🔴 CRITICAL"
+            health_class = "health-crit"
+        elif sev1_count >= 2:
+            health = "🟡 WARNING"
+            health_class = "health-warn"
+        else:
+            health = "🟢 HEALTHY"
+            health_class = "health-good"
+        
+        st.markdown(f"### System Health")
+        st.markdown(f"<h2 class='{health_class}'>{health}</h2>", unsafe_allow_html=True)
+        st.markdown(f"**SEV-1 Tickets:** {sev1_count}")
+        st.markdown(f"**Total Processed:** {len(df)}")
+    
+    st.markdown("---")
+    st.markdown("<small style='color:#666'>TriGuard AI v2.0</small>", unsafe_allow_html=True)
 
-# --- Load data ---
+# ============================
+# Load Data
+# ============================
 df = load_output()
 logs = load_logs()
 
 if df.empty:
-    st.warning("⚠️ No data found. Please run `python main.py` first to process tickets.")
+    st.markdown("""
+    <div class="hero-header">
+        <h1 class="hero-title">🛡️ TriGuard AI — Command Center</h1>
+        <p class="hero-subtitle">No data detected. Run <code>python main.py</code> to process tickets first.</p>
+    </div>
+    """, unsafe_allow_html=True)
     st.stop()
 
-# --- Top Metrics ---
-col1, col2, col3, col4 = st.columns(4)
-
-total_tickets = len(df)
-total_incidents = df[df['action'].str.contains("INCIDENT", na=False)].groupby('domain').ngroups
-total_escalated = len(df[df['priority_score'] >= 80])
-total_auto_replied = len(df[df['priority_score'] < 80])
-
-with col1:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-value">{total_tickets}</div>
-        <div class="metric-label">Total Tickets</div>
+# ============================
+# PAGE: Live Dashboard
+# ============================
+if page == "📊 Live Dashboard":
+    # Hero Header
+    st.markdown("""
+    <div class="hero-header">
+        <h1 class="hero-title">🛡️ TriGuard AI — Live Command Center</h1>
+        <p class="hero-subtitle">Real-time incident intelligence • Pattern detection • Dynamic severity analysis</p>
     </div>
     """, unsafe_allow_html=True)
-
-with col2:
+    
+    # --- Metric Cards ---
+    total_tickets = len(df)
+    sev1_count = len(df[df['severity'] == 'SEV-1'])
+    escalated = len(df[df['priority_score'] >= 80])
+    auto_replied = len(df[df['priority_score'] < 80])
+    incident_tickets = len(df[df['action'].str.contains("INCIDENT", na=False)])
+    
     st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-value" style="color: #ff6b6b;">{total_escalated}</div>
-        <div class="metric-label">Escalated (SEV-1)</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col3:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-value" style="color: #51cf66;">{total_auto_replied}</div>
-        <div class="metric-label">Auto-Replied</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col4:
-    incident_count = len(df[df['action'].str.contains("INCIDENT", na=False)])
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-value" style="color: #ffd43b;">{incident_count}</div>
-        <div class="metric-label">Incident Tickets</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-st.markdown("")
-
-# --- Charts Row ---
-chart_col1, chart_col2 = st.columns(2)
-
-with chart_col1:
-    st.subheader("📊 Tickets by Domain")
-    domain_counts = df['domain'].value_counts()
-    st.bar_chart(domain_counts, color="#e94560")
-
-with chart_col2:
-    st.subheader("🎯 Severity Distribution")
-    severity_counts = df['severity'].value_counts()
-    st.bar_chart(severity_counts, color="#0f3460")
-
-st.markdown("---")
-
-# --- Priority Score Distribution ---
-chart_col3, chart_col4 = st.columns(2)
-
-with chart_col3:
-    st.subheader("⚡ Priority Scores")
-    st.bar_chart(df.set_index('ticket_id')['priority_score'], color="#ffd43b")
-
-with chart_col4:
-    st.subheader("🔧 Issue Types")
-    issue_counts = df['issue_type'].value_counts()
-    st.bar_chart(issue_counts, color="#51cf66")
-
-st.markdown("---")
-
-# --- Incidents Section ---
-st.subheader("🚨 Detected Incidents")
-incident_df = df[df['action'].str.contains("INCIDENT", na=False)]
-if not incident_df.empty:
-    for domain in incident_df['domain'].unique():
-        group = incident_df[incident_df['domain'] == domain]
-        st.markdown(f"""
-        <div class="incident-banner">
-            🚨 INCIDENT: {domain} — {group.iloc[0]['issue_type']} | {len(group)} tickets affected | Severity: {group.iloc[0]['severity']}
+    <div class="metric-grid">
+        <div class="metric-card">
+            <div class="metric-icon">📊</div>
+            <div class="metric-value val-blue">{total_tickets}</div>
+            <div class="metric-label">Total Tickets</div>
         </div>
-        """, unsafe_allow_html=True)
-    st.dataframe(incident_df[['ticket_id', 'user_query', 'domain', 'issue_type', 'severity', 'priority_score', 'action']], 
-                 use_container_width=True)
-else:
-    st.info("No incidents detected in the current batch.")
+        <div class="metric-card">
+            <div class="metric-icon">🚨</div>
+            <div class="metric-value val-red">{sev1_count}</div>
+            <div class="metric-label">SEV-1 Critical</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">⬆️</div>
+            <div class="metric-value val-yellow">{escalated}</div>
+            <div class="metric-label">Escalated</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">✅</div>
+            <div class="metric-value val-green">{auto_replied}</div>
+            <div class="metric-label">Auto-Resolved</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">🔗</div>
+            <div class="metric-value val-purple">{incident_tickets}</div>
+            <div class="metric-label">Incident Linked</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # --- Charts Row 1: Domain Distribution + Severity Heatmap ---
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown('<div class="section-header">📍 Tickets by Domain</div>', unsafe_allow_html=True)
+        domain_counts = df['domain'].value_counts().reset_index()
+        domain_counts.columns = ['Domain', 'Count']
+        fig_domain = px.bar(
+            domain_counts, x='Domain', y='Count',
+            color='Count',
+            color_continuous_scale=['#1a1a2e', '#e94560'],
+            template='plotly_dark'
+        )
+        fig_domain.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(family="Inter", color="#aaa"),
+            showlegend=False,
+            coloraxis_showscale=False,
+            margin=dict(l=20, r=20, t=20, b=40),
+            height=320
+        )
+        st.plotly_chart(fig_domain, use_container_width=True)
+    
+    with col2:
+        st.markdown('<div class="section-header">🌡️ Severity Heatmap</div>', unsafe_allow_html=True)
+        # Create severity x domain heatmap
+        heatmap_data = df.groupby(['domain', 'severity']).size().unstack(fill_value=0)
+        severity_order = ['SEV-1', 'SEV-2', 'SEV-3', 'SEV-4']
+        for s in severity_order:
+            if s not in heatmap_data.columns:
+                heatmap_data[s] = 0
+        heatmap_data = heatmap_data[severity_order]
+        
+        fig_heat = go.Figure(data=go.Heatmap(
+            z=heatmap_data.values,
+            x=heatmap_data.columns.tolist(),
+            y=heatmap_data.index.tolist(),
+            colorscale=[[0, '#0a0a0f'], [0.25, '#1a1a2e'], [0.5, '#302b63'], [0.75, '#e94560'], [1, '#ff6b6b']],
+            showscale=True,
+            hoverongaps=False
+        ))
+        fig_heat.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(family="Inter", color="#aaa"),
+            margin=dict(l=20, r=20, t=20, b=40),
+            height=320
+        )
+        st.plotly_chart(fig_heat, use_container_width=True)
+    
+    # --- Charts Row 2: Priority Scores + Issue Type Treemap ---
+    col3, col4 = st.columns(2)
+    
+    with col3:
+        st.markdown('<div class="section-header">⚡ Priority Score Distribution</div>', unsafe_allow_html=True)
+        fig_priority = go.Figure()
+        colors = ['#e94560' if s >= 80 else '#ffd43b' if s >= 50 else '#4dabf7' if s >= 20 else '#51cf66' for s in df['priority_score']]
+        fig_priority.add_trace(go.Bar(
+            x=df['ticket_id'].astype(str),
+            y=df['priority_score'],
+            marker_color=colors,
+            hovertemplate='Ticket #%{x}<br>Score: %{y}<extra></extra>'
+        ))
+        fig_priority.add_hline(y=80, line_dash="dash", line_color="#e94560", annotation_text="Escalation Threshold")
+        fig_priority.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(family="Inter", color="#aaa"),
+            xaxis_title="Ticket ID",
+            yaxis_title="Priority Score",
+            margin=dict(l=20, r=20, t=20, b=40),
+            height=320
+        )
+        st.plotly_chart(fig_priority, use_container_width=True)
+    
+    with col4:
+        st.markdown('<div class="section-header">🏗️ Top Affected Modules</div>', unsafe_allow_html=True)
+        issue_counts = df.groupby(['domain', 'issue_type']).size().reset_index(name='count')
+        fig_tree = px.treemap(
+            issue_counts,
+            path=['domain', 'issue_type'],
+            values='count',
+            color='count',
+            color_continuous_scale=['#1a1a2e', '#e94560', '#ff6b6b'],
+            template='plotly_dark'
+        )
+        fig_tree.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(family="Inter", color="#aaa"),
+            margin=dict(l=10, r=10, t=10, b=10),
+            height=320,
+            coloraxis_showscale=False
+        )
+        st.plotly_chart(fig_tree, use_container_width=True)
+    
+    # --- System Health Timeline ---
+    st.markdown('<div class="section-header">📈 System Health — Anomaly Spike Detection</div>', unsafe_allow_html=True)
+    
+    if logs:
+        log_df = pd.DataFrame(logs)
+        if 'timestamp' in log_df.columns:
+            log_df['timestamp'] = pd.to_datetime(log_df['timestamp'])
+            log_df['minute'] = log_df['timestamp'].dt.floor('min')
+            
+            # Ticket flow over time
+            flow = log_df.groupby('minute').size().reset_index(name='ticket_count')
+            
+            # Severity over time
+            log_df['severity'] = log_df['classification'].apply(lambda x: x.get('severity', 'SEV-4') if isinstance(x, dict) else 'SEV-4')
+            log_df['priority'] = log_df['classification'].apply(lambda x: x.get('priority_score', 0) if isinstance(x, dict) else 0)
+            
+            fig_timeline = make_subplots(
+                rows=2, cols=1,
+                shared_xaxes=True,
+                vertical_spacing=0.08,
+                subplot_titles=("📊 Real-Time Ticket Flow", "⚡ Priority Score Spikes"),
+                row_heights=[0.5, 0.5]
+            )
+            
+            # Ticket flow
+            fig_timeline.add_trace(
+                go.Scatter(
+                    x=log_df['timestamp'], y=log_df.index + 1,
+                    mode='lines+markers',
+                    line=dict(color='#4dabf7', width=2),
+                    marker=dict(size=4),
+                    name='Ticket Flow',
+                    fill='tozeroy',
+                    fillcolor='rgba(77,171,247,0.1)'
+                ), row=1, col=1
+            )
+            
+            # Priority spikes
+            spike_colors = ['#e94560' if p >= 80 else '#ffd43b' if p >= 50 else '#51cf66' for p in log_df['priority']]
+            fig_timeline.add_trace(
+                go.Bar(
+                    x=log_df['timestamp'], y=log_df['priority'],
+                    marker_color=spike_colors,
+                    name='Priority Score'
+                ), row=2, col=1
+            )
+            
+            # Anomaly threshold line
+            fig_timeline.add_hline(y=80, line_dash="dash", line_color="#e94560", row=2, col=1)
+            
+            fig_timeline.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font=dict(family="Inter", color="#aaa"),
+                showlegend=False,
+                height=500,
+                margin=dict(l=20, r=20, t=40, b=20)
+            )
+            st.plotly_chart(fig_timeline, use_container_width=True)
+    
+    # --- Real-Time Ticket Flow Table ---
+    st.markdown('<div class="section-header">🔄 Live Ticket Stream</div>', unsafe_allow_html=True)
+    
+    display_df = df[['ticket_id', 'user_query', 'domain', 'issue_type', 'severity', 'priority_score', 'action']].copy()
+    display_df.columns = ['ID', 'Query', 'Domain', 'Issue', 'Severity', 'Score', 'Action']
+    
+    st.dataframe(
+        display_df.style.apply(
+            lambda row: [
+                'background-color: rgba(233,69,96,0.2); color: #ff6b6b' if row['Score'] >= 80
+                else 'background-color: rgba(255,212,59,0.1); color: #ffd43b' if row['Score'] >= 50
+                else '' for _ in row
+            ], axis=1
+        ),
+        use_container_width=True,
+        height=400
+    )
 
-st.markdown("---")
+# ============================
+# PAGE: AI Response Generator
+# ============================
+elif page == "🤖 AI Response Generator":
+    st.markdown("""
+    <div class="hero-header">
+        <h1 class="hero-title">🤖 AI Response Generator</h1>
+        <p class="hero-subtitle">Intelligent response drafting • Fix suggestions • Auto-escalation routing</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        st.markdown("### 📝 Enter a Support Ticket")
+        ticket_text = st.text_area(
+            "Ticket Text",
+            placeholder="e.g., My payment failed but money was deducted from my account!",
+            height=120,
+            label_visibility="collapsed"
+        )
+        
+        generate_btn = st.button("🚀 Generate AI Response", type="primary", use_container_width=True)
+    
+    if generate_btn and ticket_text:
+        with st.spinner("🧠 AI is analyzing the ticket..."):
+            time.sleep(0.8)  # Dramatic effect
+            
+            classification = process_ticket(ticket_text, volume_multiplier=1)
+            domain = classification['domain']
+            issue_type = classification['issue_type']
+            severity = classification['severity']
+            priority_score = classification['priority_score']
+            
+            ai_response = generate_ai_response(domain, issue_type, severity, ticket_text)
+        
+        with col2:
+            st.markdown("### 🎯 Classification Result")
+            
+            sev_color = "#e94560" if severity == "SEV-1" else "#ffd43b" if severity == "SEV-2" else "#4dabf7" if severity == "SEV-3" else "#51cf66"
+            
+            mc1, mc2, mc3, mc4 = st.columns(4)
+            mc1.metric("Domain", domain)
+            mc2.metric("Issue Type", issue_type)
+            mc3.metric("Severity", severity)
+            mc4.metric("Score", f"{priority_score}/100")
+        
+        st.markdown("---")
+        
+        # Escalation info
+        escalation = ESCALATION_RULES.get(severity, ESCALATION_RULES["SEV-4"])
+        esc_col1, esc_col2, esc_col3 = st.columns(3)
+        esc_col1.metric("🎯 Routing", escalation['action'])
+        esc_col2.metric("👥 Assigned Team", escalation['team'])
+        esc_col3.metric("⏱️ SLA Target", escalation['sla'])
+        
+        st.markdown("---")
+        
+        st.markdown("### 💬 AI-Generated Response")
+        st.markdown(f'<div class="ai-response-box">{ai_response}</div>', unsafe_allow_html=True)
+        
+        st.markdown("")
+        copy_col1, copy_col2 = st.columns(2)
+        with copy_col1:
+            st.download_button(
+                "📋 Download Response",
+                ai_response,
+                file_name=f"response_ticket.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
 
-# --- All Tickets Table ---
-st.subheader("📋 All Processed Tickets")
-st.dataframe(
-    df.style.apply(
-        lambda row: ['background-color: #3d1f1f' if row['priority_score'] >= 80 
-                     else 'background-color: #1f3d1f' if row['priority_score'] < 20 
-                     else '' for _ in row], axis=1
-    ),
-    use_container_width=True,
-    height=400
-)
+# ============================
+# PAGE: Incident Center
+# ============================
+elif page == "🚨 Incident Center":
+    st.markdown("""
+    <div class="hero-header">
+        <h1 class="hero-title">🚨 Incident Command Center</h1>
+        <p class="hero-subtitle">Active incidents • Cluster analysis • Impact assessment</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    incident_df = df[df['action'].str.contains("INCIDENT", na=False)]
+    standalone_df = df[~df['action'].str.contains("INCIDENT", na=False)]
+    
+    # Incident Summary
+    col1, col2, col3 = st.columns(3)
+    col1.metric("🚨 Active Incidents", len(incident_df['domain'].unique()) if not incident_df.empty else 0)
+    col2.metric("📊 Tickets in Incidents", len(incident_df))
+    col3.metric("📋 Standalone Tickets", len(standalone_df))
+    
+    st.markdown("---")
+    
+    if not incident_df.empty:
+        for domain in incident_df['domain'].unique():
+            group = incident_df[incident_df['domain'] == domain]
+            severity = group.iloc[0]['severity']
+            issue = group.iloc[0]['issue_type']
+            avg_score = group['priority_score'].mean()
+            
+            st.markdown(f"""
+            <div class="incident-banner">
+                🚨 ACTIVE INCIDENT: {domain} — {issue} | {len(group)} tickets affected | {severity} | Avg Score: {avg_score:.0f}
+            </div>
+            """, unsafe_allow_html=True)
+            
+            with st.expander(f"📋 View {len(group)} affected tickets", expanded=True):
+                st.dataframe(
+                    group[['ticket_id', 'user_query', 'severity', 'priority_score', 'action']],
+                    use_container_width=True
+                )
+    else:
+        st.success("✅ No active incidents detected. System is operating normally.")
+    
+    # Severity Breakdown Pie
+    st.markdown("---")
+    st.markdown('<div class="section-header">📊 Overall Severity Breakdown</div>', unsafe_allow_html=True)
+    
+    sev_counts = df['severity'].value_counts().reset_index()
+    sev_counts.columns = ['Severity', 'Count']
+    fig_pie = px.pie(
+        sev_counts, names='Severity', values='Count',
+        color='Severity',
+        color_discrete_map={
+            'SEV-1': '#e94560',
+            'SEV-2': '#ffd43b',
+            'SEV-3': '#4dabf7',
+            'SEV-4': '#51cf66'
+        },
+        hole=0.4,
+        template='plotly_dark'
+    )
+    fig_pie.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(family="Inter", color="#aaa"),
+        height=400
+    )
+    st.plotly_chart(fig_pie, use_container_width=True)
 
-# --- Footer ---
-st.markdown("---")
-st.markdown(
-    "<p style='text-align: center; color: #666;'>🛡️ TriGuard AI — Intelligent Incident Management System</p>",
-    unsafe_allow_html=True
-)
+# ============================
+# PAGE: Ticket Explorer
+# ============================
+elif page == "📋 Ticket Explorer":
+    st.markdown("""
+    <div class="hero-header">
+        <h1 class="hero-title">📋 Ticket Explorer</h1>
+        <p class="hero-subtitle">Search, filter, and analyze all processed tickets</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Filters
+    filter_col1, filter_col2, filter_col3 = st.columns(3)
+    
+    with filter_col1:
+        domain_filter = st.multiselect("Filter by Domain", df['domain'].unique(), default=df['domain'].unique())
+    with filter_col2:
+        severity_filter = st.multiselect("Filter by Severity", df['severity'].unique(), default=df['severity'].unique())
+    with filter_col3:
+        score_range = st.slider("Priority Score Range", 0, 100, (0, 100))
+    
+    # Apply filters
+    filtered_df = df[
+        (df['domain'].isin(domain_filter)) &
+        (df['severity'].isin(severity_filter)) &
+        (df['priority_score'] >= score_range[0]) &
+        (df['priority_score'] <= score_range[1])
+    ]
+    
+    st.markdown(f"**Showing {len(filtered_df)} of {len(df)} tickets**")
+    
+    st.dataframe(
+        filtered_df.style.apply(
+            lambda row: [
+                'background-color: rgba(233,69,96,0.2); color: #ff6b6b' if row['priority_score'] >= 80
+                else 'background-color: rgba(255,212,59,0.1); color: #ffd43b' if row['priority_score'] >= 50
+                else '' for _ in row
+            ], axis=1
+        ),
+        use_container_width=True,
+        height=500
+    )
+    
+    # Export
+    st.download_button(
+        "📥 Export Filtered Data as CSV",
+        filtered_df.to_csv(index=False),
+        file_name="triguard_filtered_export.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
