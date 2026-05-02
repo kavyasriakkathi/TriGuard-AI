@@ -220,10 +220,10 @@ with st.sidebar:
     df = load_output()
     if not df.empty:
         sev1_count = len(df[df['severity'] == 'SEV-1'])
-        if sev1_count >= 5:
+        if sev1_count >= 10:
             health = "🔴 CRITICAL"
             health_class = "health-crit"
-        elif sev1_count >= 2:
+        elif sev1_count >= 3:
             health = "🟡 WARNING"
             health_class = "health-warn"
         else:
