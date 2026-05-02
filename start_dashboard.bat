@@ -42,7 +42,7 @@ echo.
 
 :: We use --server.headless false to ensure it opens the browser
 :: We use --browser.gatherUsageStats false for privacy and speed
-%PYTHON_EXE% -m streamlit run app.py --server.port 8501 --server.headless false --browser.gatherUsageStats false
+%PYTHON_EXE% -m streamlit run app.py --server.port 8505 --server.address 127.0.0.1 --server.headless false --browser.gatherUsageStats false
 
 if %errorlevel% neq 0 (
     echo.

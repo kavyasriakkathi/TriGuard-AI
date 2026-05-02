@@ -1,5 +1,6 @@
 [server]
-port = 8501
+port = 8505
+address = "127.0.0.1"
 headless = false
 enableCORS = false
 enableXsrfProtection = false

@@ -211,22 +211,25 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================
-# Data Loading
+# Data Loading (Crash-Proof)
 # ============================
 @st.cache_data(ttl=5)
 def load_output():
-    if os.path.exists("output.csv"):
-        return pd.read_csv("output.csv")
+    try:
+        if os.path.exists("output.csv"):
+            return pd.read_csv("output.csv")
+    except Exception as e:
+        st.warning(f"⚠️ Error loading output.csv: {e}")
     return pd.DataFrame()
 
 @st.cache_data(ttl=5)
 def load_logs():
-    if os.path.exists("logs.json"):
-        with open("logs.json", "r", encoding="utf-8") as f:
-            try:
+    try:
+        if os.path.exists("logs.json"):
+            with open("logs.json", "r", encoding="utf-8") as f:
                 return json.load(f)
-            except json.JSONDecodeError:
-                return []
+    except Exception as e:
+        st.warning(f"⚠️ Error loading logs.json: {e}")
     return []
 
 # ============================
