@@ -856,19 +856,28 @@ elif page == "🧠 AI Learning Lab":
                 </div>
                 """, unsafe_allow_html=True)
                 
-                f_col1, f_col2, f_col3 = st.columns([1, 1, 1])
+                f_col1, f_col2, f_col3, f_col4 = st.columns([1.5, 1, 1, 1])
                 with f_col1:
                     st.write(f"**Predicted:** {entry.get('predicted_domain', 'Unknown')}")
+                    st.write(f"**Issue:** {entry.get('predicted_issue', 'Unknown')}")
                     st.write(f"**Confidence:** {round(entry.get('confidence', 0.85)*100, 1)}%")
                 
                 with f_col2:
                     new_domain = st.selectbox("Correct Domain", 
                                             ["Payments", "Security", "HackerRank", "AI Tools", "Performance", "General"],
+                                            index=["Payments", "Security", "HackerRank", "AI Tools", "Performance", "General"].index(entry.get('predicted_domain', 'General')) if entry.get('predicted_domain') in ["Payments", "Security", "HackerRank", "AI Tools", "Performance", "General"] else 0,
                                             key=f"dom_{entry['id']}")
                 
                 with f_col3:
-                    if st.button("Submit Correction", key=f"btn_{entry['id']}", use_container_width=True):
-                        memory_engine.update_feedback(entry['id'], new_domain, entry.get('predicted_issue', 'Unknown'))
+                    new_issue = st.text_input("Correct Issue", value=entry.get('predicted_issue', 'Unknown'), key=f"iss_{entry['id']}")
+                    new_sev = st.selectbox("Correct Severity", ["SEV-1", "SEV-2", "SEV-3", "SEV-4"], 
+                                         index=2, key=f"sev_{entry['id']}")
+                
+                with f_col4:
+                    st.write("") # Padding
+                    st.write("") 
+                    if st.button("Submit Correction", key=f"btn_{entry['id']}", use_container_width=True, type="primary"):
+                        memory_engine.update_feedback(entry['id'], new_domain, new_issue, new_sev)
                         st.toast(f"✅ AI learned from: {entry['id']}")
                         time.sleep(0.5)
                         st.rerun()
