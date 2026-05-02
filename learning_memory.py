@@ -90,27 +90,18 @@ class LearningMemory:
                     entry["final_severity"] = final_severity
                 updated = True
                 break
-        
-        # If ID not found (e.g. manual correction via text search)
-        if not updated:
-            # Fallback for older entries or text-based search
-            pass
-            
         self.save_data(data)
 
     def get_performance_metrics(self):
         data = self.load_data()
         total_feedback = 0
         correct_predictions = 0
-        
         for d in data:
             if d.get("final_domain"):
                 total_feedback += 1
                 if d["final_domain"] == d.get("predicted_domain"):
                     correct_predictions += 1
-        
         accuracy = round((correct_predictions / total_feedback) * 100, 2) if total_feedback > 0 else 100.0
-        
         return {
             "total_logs": len(data),
             "total_feedback": total_feedback,
@@ -118,12 +109,9 @@ class LearningMemory:
             "avg_confidence": round(sum(d.get("confidence", 0) for d in data) / len(data) * 100, 2) if data else 0
         }
 
-# For backward compatibility with functional calls in the rest of the app
 _global_memory = LearningMemory()
 
 def update_memory(ticket_text, human_domain, human_issue, human_severity):
-    # This remains for the existing feedback loop in main.py
-    # It tries to find the latest log for this text and update it
     data = _global_memory.load_data()
     found = False
     for entry in reversed(data):
@@ -133,9 +121,7 @@ def update_memory(ticket_text, human_domain, human_issue, human_severity):
             entry["final_severity"] = human_severity
             found = True
             break
-    
     if not found:
-        # If not logged before, create a manual entry
         _global_memory.log_prediction(ticket_text, "Manual", "Manual", 1.0)
         update_memory(ticket_text, human_domain, human_issue, human_severity)
     else:
