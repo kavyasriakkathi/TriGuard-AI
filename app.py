@@ -21,6 +21,9 @@ from plotly.subplots import make_subplots
 from responder import generate_ai_response, ESCALATION_RULES
 from classifier import process_ticket
 from rca_engine import load_rca_reports
+from learning_memory import get_memory_instance
+
+memory_engine = get_memory_instance()
 
 # ============================
 # Custom CSS — Dark Premium Theme
@@ -144,6 +147,16 @@ st.markdown("""
         color: #c9d1d9;
         white-space: pre-wrap;
     }
+
+    /* Learning Lab Card */
+    .lab-card {
+        background: rgba(26, 26, 46, 0.6);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(233, 69, 96, 0.2);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
     
     /* Sidebar */
     [data-testid="stSidebar"] {
@@ -196,7 +209,8 @@ with st.sidebar:
         "📊 Live Dashboard",
         "🤖 AI Response Generator",
         "🚨 Incident Center",
-        "📋 Ticket Explorer"
+        "📋 Ticket Explorer",
+        "🧠 AI Learning Lab"
     ], label_visibility="collapsed")
     
     st.markdown("---")
@@ -456,7 +470,12 @@ if page == "📊 Live Dashboard":
     st.markdown('<div class="section-header">🔄 Live Ticket Stream</div>', unsafe_allow_html=True)
     
     display_df = df[['ticket_id', 'user_query', 'domain', 'issue_type', 'severity', 'priority_score', 'action']].copy()
-    display_df.columns = ['ID', 'Query', 'Domain', 'Issue', 'Severity', 'Score', 'Action']
+    
+    # Add confidence from logs if available
+    conf_map = {log.get('ticket_id'): log.get('classification', {}).get('confidence_score', 0.85) for log in logs}
+    display_df['Confidence'] = display_df['ticket_id'].map(conf_map).fillna(0.85)
+    
+    display_df.columns = ['ID', 'Query', 'Domain', 'Issue', 'Severity', 'Score', 'Action', 'Confidence']
     
     st.dataframe(
         display_df.style.apply(
@@ -465,7 +484,7 @@ if page == "📊 Live Dashboard":
                 else 'background-color: rgba(255,212,59,0.1); color: #ffd43b' if row['Score'] >= 50
                 else '' for _ in row
             ], axis=1
-        ),
+        ).format({'Confidence': '{:.1%}'}),
         use_container_width=True,
         height=400
     )
@@ -712,3 +731,93 @@ elif page == "📋 Ticket Explorer":
         mime="text/csv",
         use_container_width=True
     )
+
+# ============================
+# PAGE: AI Learning Lab
+# ============================
+elif page == "🧠 AI Learning Lab":
+    st.markdown("""
+    <div class="hero-header">
+        <h1 class="hero-title">🧠 AI Learning Lab</h1>
+        <p class="hero-subtitle">Model performance tracking • Confidence analysis • Human-in-the-loop training</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    metrics = memory_engine.get_performance_metrics()
+    
+    # Metrics Row
+    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+    m_col1.metric("📊 Total Predictions", metrics["total_logs"])
+    m_col2.metric("🎯 Accuracy", f"{metrics['accuracy']}%", delta="Self-Improving")
+    m_col3.metric("⚡ Avg Confidence", f"{metrics['avg_confidence']}%")
+    m_col4.metric("👥 Human Feedback", metrics["total_feedback"])
+    
+    st.markdown("---")
+    
+    # Visualization Row
+    v_col1, v_col2 = st.columns([2, 1])
+    
+    data = memory_engine.load_data()
+    if data:
+        df_mem = pd.DataFrame(data)
+        
+        with v_col1:
+            st.markdown('<div class="section-header">📈 Prediction Confidence Trend</div>', unsafe_allow_html=True)
+            df_mem['timestamp'] = pd.to_datetime(df_mem['timestamp'])
+            fig_conf = px.line(df_mem, x='timestamp', y='confidence', 
+                             title="Confidence per Ticket",
+                             template="plotly_dark", color_discrete_sequence=['#e94560'])
+            fig_conf.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+            st.plotly_chart(fig_conf, use_container_width=True)
+            
+        with v_col2:
+            st.markdown('<div class="section-header">🎯 Confidence Distribution</div>', unsafe_allow_html=True)
+            fig_hist = px.histogram(df_mem, x='confidence', nbins=10,
+                                  template="plotly_dark", color_discrete_sequence=['#4dabf7'])
+            fig_hist.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+            st.plotly_chart(fig_hist, use_container_width=True)
+            
+    # Feedback Section
+    st.markdown('<div class="section-header">👨‍🏫 Active Learning Interface</div>', unsafe_allow_html=True)
+    st.info("The AI has logged the following recent predictions. Correct them to improve future accuracy.")
+    
+    unlabeled = [d for d in reversed(data) if not d.get("final_domain")][:5]
+    
+    if not unlabeled:
+        st.success("✨ All recent predictions have been verified or no new data available!")
+    else:
+        for entry in unlabeled:
+            with st.container():
+                st.markdown(f"""
+                <div class="lab-card">
+                    <p style="font-size:0.9rem; color:#888;">Ticket Content:</p>
+                    <p style="font-weight:500; margin-bottom:15px;">"{entry['ticket']}"</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                f_col1, f_col2, f_col3 = st.columns([1, 1, 1])
+                with f_col1:
+                    st.write(f"**Predicted:** {entry['predicted_domain']}")
+                    st.write(f"**Confidence:** {round(entry['confidence']*100, 1)}%")
+                
+                with f_col2:
+                    new_domain = st.selectbox("Correct Domain", 
+                                            ["Payments", "Security", "HackerRank", "AI Tools", "Performance", "General"],
+                                            key=f"dom_{entry['id']}")
+                
+                with f_col3:
+                    if st.button("Submit Correction", key=f"btn_{entry['id']}", use_container_width=True):
+                        memory_engine.update_feedback(entry['id'], new_domain, entry['predicted_issue'])
+                        st.toast(f"✅ AI learned from: {entry['id']}")
+                        time.sleep(0.5)
+                        st.rerun()
+                st.markdown("<br>", unsafe_allow_html=True)
+
+    # Model Info
+    st.markdown('<div class="section-header">🤖 ML Model Architecture</div>', unsafe_allow_html=True)
+    info = get_model_info()
+    if info:
+        ic1, ic2, ic3 = st.columns(3)
+        ic1.write(f"**Base Model:** Support Vector Machine (LinearSVC)")
+        ic2.write(f"**Vectorization:** TF-IDF (N-grams 1,2)")
+        ic3.write(f"**Last Retrained:** {info['training_samples']} samples total")

@@ -5,9 +5,11 @@ from classifier import process_ticket
 from responder import get_response
 from logger import log_ticket
 from pattern_detector import detect_incidents
-from learning_memory import update_memory
+from learning_memory import update_memory, get_memory_instance
 from ml_model import train_model, get_model_info
 from rca_engine import generate_rca
+
+memory_engine = get_memory_instance()
 
 from rich.console import Console
 from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn
@@ -134,6 +136,11 @@ def main():
                 for tid in ticket_ids:
                     t_text = ticket_map[tid]['user_query']
                     log_ticket(tid, t_text, classification, response, is_incident=True)
+                    
+                    # Log to learning memory for dashboard accuracy tracking
+                    if source == "ml_model":
+                        memory_engine.log_prediction(t_text, domain, issue_type, classification.get('confidence_score', 0.85))
+                        
                     writer.writerow({
                         'ticket_id': tid,
                         'user_query': t_text,
@@ -167,6 +174,11 @@ def main():
                 response = get_response(domain, issue_type, severity, is_incident=False)
                 
                 log_ticket(tid, t_text, classification, response, is_incident=False)
+                
+                # Log to learning memory for dashboard accuracy tracking
+                if source == "ml_model":
+                    memory_engine.log_prediction(t_text, domain, issue_type, classification.get('confidence_score', 0.85))
+                
                 writer.writerow({
                     'ticket_id': tid,
                     'user_query': t_text,

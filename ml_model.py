@@ -100,21 +100,28 @@ SEED_DATA = [
 def get_training_data():
     """
     Combines seed data with human feedback corrections from learning memory.
-    This is the core of the auto-retraining pipeline.
     """
     texts = [d[0] for d in SEED_DATA]
     domains = [d[1] for d in SEED_DATA]
     issues = [d[2] for d in SEED_DATA]
     
-    # Load human corrections from feedback loop
+    # Load human corrections from feedback loop (new format)
     if os.path.exists("ticket_memory.json"):
         with open("ticket_memory.json", "r", encoding="utf-8") as f:
             try:
                 memory = json.load(f)
-                for ticket_text, correction in memory.items():
-                    texts.append(ticket_text)
-                    domains.append(correction["domain"])
-                    issues.append(correction["issue_type"])
+                if isinstance(memory, list):
+                    for entry in memory:
+                        if entry.get("final_domain") and entry.get("ticket"):
+                            texts.append(entry["ticket"])
+                            domains.append(entry["final_domain"])
+                            issues.append(entry.get("final_issue", "Unknown"))
+                elif isinstance(memory, dict):
+                    # Fallback for old format if migration wasn't triggered
+                    for ticket_text, correction in memory.items():
+                        texts.append(ticket_text)
+                        domains.append(correction["domain"])
+                        issues.append(correction["issue_type"])
             except json.JSONDecodeError:
                 pass
     
@@ -130,24 +137,23 @@ def train_model(force=False):
     
     # Check if retraining is needed
     if os.path.exists(MODEL_FILE) and not force:
-        # Check if new feedback has been added since last training
         if os.path.exists(TRAINING_LOG):
             with open(TRAINING_LOG, "r") as f:
                 log = json.load(f)
                 if log.get("training_samples") == len(texts):
-                    return  # No new data, skip retraining
+                    return log # No new data, skip retraining
     
     # --- Domain Classifier ---
     domain_pipeline = Pipeline([
         ('tfidf', TfidfVectorizer(stop_words='english', max_features=5000, ngram_range=(1, 2))),
-        ('clf', LinearSVC(max_iter=10000, C=1.0))
+        ('clf', LinearSVC(max_iter=10000, C=1.0, dual='auto'))
     ])
     domain_pipeline.fit(texts, domains)
     
     # --- Issue Type Classifier ---
     issue_pipeline = Pipeline([
         ('tfidf', TfidfVectorizer(stop_words='english', max_features=5000, ngram_range=(1, 2))),
-        ('clf', LinearSVC(max_iter=10000, C=1.0))
+        ('clf', LinearSVC(max_iter=10000, C=1.0, dual='auto'))
     ])
     issue_pipeline.fit(texts, issues)
     
@@ -175,7 +181,7 @@ def train_model(force=False):
 
 def predict(ticket_text):
     """
-    Predicts the domain and issue type for a ticket using the trained ML model.
+    Predicts the domain and issue type with a confidence score.
     """
     if not os.path.exists(MODEL_FILE):
         train_model(force=True)
@@ -183,10 +189,31 @@ def predict(ticket_text):
     with open(MODEL_FILE, 'rb') as f:
         model = pickle.load(f)
     
+    # Predict Domain
+    domain_scores = model['domain_pipeline'].decision_function([ticket_text])
     domain = model['domain_pipeline'].predict([ticket_text])[0]
+    
+    # Calculate confidence proxy (normalize decision function scores)
+    import numpy as np
+    def calculate_confidence(scores):
+        if scores.ndim > 1:
+            # Multi-class
+            exp_scores = np.exp(scores - np.max(scores))
+            probs = exp_scores / exp_scores.sum(axis=1)
+            return np.max(probs)
+        else:
+            # Binary class
+            prob = 1 / (1 + np.exp(-scores))
+            return max(prob, 1-prob)
+
+    try:
+        confidence = calculate_confidence(domain_scores)
+    except:
+        confidence = 0.85 # Fallback
+    
     issue_type = model['issue_pipeline'].predict([ticket_text])[0]
     
-    return domain, issue_type
+    return domain, issue_type, float(confidence)
 
 
 def get_model_info():

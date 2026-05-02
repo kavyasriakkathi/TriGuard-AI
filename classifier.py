@@ -25,40 +25,58 @@ def process_ticket(ticket_text, volume_multiplier=1):
     # 3. Dynamic Severity Engine (real-time scoring)
     base_score = 0
     
-    # Financial Impact (Heuristic)
-    if domain == "Payments":
-        base_score += 40
-        if any(kw in text_lower for kw in ["fraud", "unauthorized", "stolen"]):
-            base_score += 40
-            
-    # Security Impact (High urgency)
-    if domain == "Security":
-        base_score += 50
-        if any(kw in text_lower for kw in ["hack", "compromised", "breach", "unauthorized"]):
-            base_score += 30
-            
-    # Keyword Urgency
-    if any(kw in text_lower for kw in ["down", "failed", "critical", "urgent", "not working", "crash", "crashes"]):
-        base_score += 20
-        
-    # Smart Log Analytics (System Health)
-    anomalies = analyze_system_health()
-    if domain == "Payments" and "Payment gateway timeout spikes detected" in anomalies:
-        base_score += 30
-    if domain == "Security" and "Multiple security incidents detected" in anomalies:
-        base_score += 20
-        
-    # Incident Volume (Dynamic Scaling)
-    base_score += (volume_multiplier - 1) * 15
+import ml_model
+
+def process_ticket(query, volume_multiplier=1):
+    """
+    Main Classification Engine — Combines Memory + ML + Dynamic Scoring
+    """
+    # 1. Check AI Learning Memory (Feedback Loop)
+    memory_match = check_memory(query)
+    if memory_match:
+        memory_match['source'] = "learning_memory"
+        memory_match['confidence_score'] = 1.0
+        return memory_match
+
+    # 2. ML Prediction (TF-IDF + SVM)
+    domain, issue_type, confidence = ml_model.predict(query)
     
-    priority_score = min(base_score, 100)
+    # 3. Dynamic Priority Scoring
+    base_score = 10
     
-    # AI Score to Severity Mapping
-    if priority_score >= 80:
+    # Keyword Weighting
+    keywords = {
+        'failed': 25, 'error': 15, 'critical': 30, 'crash': 35, 
+        'payment': 20, 'money': 20, 'hacked': 40, 'unauthorized': 35,
+        'slow': 10, 'down': 20, 'emergency': 30
+    }
+    
+    for word, weight in keywords.items():
+        if word in query.lower():
+            base_score += weight
+            
+    # Domain weighting
+    domain_weights = {'Security': 20, 'Payments': 15, 'Performance': 10, 'HackerRank': 5}
+    base_score += domain_weights.get(domain, 0)
+    
+    # Confidence Factor: High confidence in serious issues boosts score, 
+    # low confidence adds a "uncertainty buffer".
+    if confidence > 0.8:
+        base_score += 5
+    elif confidence < 0.5:
+        base_score -= 5
+
+    # Volume scaling (if 10 people report the same thing, it's more urgent)
+    volume_bonus = min(volume_multiplier * 5, 30)
+    
+    final_score = min(base_score + volume_bonus, 100)
+    
+    # Severity Mapping
+    if final_score >= 80:
         severity = "SEV-1"
-    elif priority_score >= 50:
+    elif final_score >= 50:
         severity = "SEV-2"
-    elif priority_score >= 20:
+    elif final_score >= 20:
         severity = "SEV-3"
     else:
         severity = "SEV-4"
@@ -67,6 +85,7 @@ def process_ticket(ticket_text, volume_multiplier=1):
         "domain": domain,
         "issue_type": issue_type,
         "severity": severity,
-        "priority_score": priority_score,
+        "priority_score": final_score,
+        "confidence_score": round(confidence, 2),
         "source": "ml_model"
     }
