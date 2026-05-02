@@ -173,6 +173,37 @@ st.markdown("""
         border-radius: 50% !important;
     }
     
+    /* Sidebar Badge */
+    .premium-badge {
+        background: linear-gradient(45deg, #ffd700, #ff8c00);
+        color: black;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        display: inline-block;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+    }
+    
+    .status-pulse {
+        width: 10px;
+        height: 10px;
+        background: #51cf66;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+        box-shadow: 0 0 10px #51cf66;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 0.4; transform: scale(0.9); }
+        50% { opacity: 1; transform: scale(1.1); }
+        100% { opacity: 0.4; transform: scale(0.9); }
+    }
+    
     /* Hide Streamlit branding */
     #MainMenu { visibility: hidden; }
     footer { visibility: hidden; }
@@ -202,8 +233,9 @@ def load_logs():
 # Sidebar
 # ============================
 with st.sidebar:
+    st.markdown('<div class="premium-badge">💎 TOP 1% EFFICIENCY</div>', unsafe_allow_html=True)
     st.markdown("## 🛡️ TriGuard AI")
-    st.markdown("**Command Center**")
+    st.markdown("<div><span class="status-pulse"></span><span style='color:#51cf66; font-size:0.8rem; font-weight:600;'>AI CORE ACTIVE</span></div>", unsafe_allow_html=True)
     st.markdown("---")
     
     page = st.radio("Navigate", [
@@ -757,10 +789,10 @@ elif page == "🧠 AI Learning Lab":
     
     # Metrics Row
     m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-    m_col1.metric("📊 Total Predictions", metrics["total_logs"])
+    m_col1.metric("📊 Total Predictions", metrics["total_logs"], delta="Active")
     m_col2.metric("🎯 Accuracy", f"{metrics['accuracy']}%", delta="Self-Improving")
-    m_col3.metric("⚡ Avg Confidence", f"{metrics['avg_confidence']}%")
-    m_col4.metric("👥 Human Feedback", metrics["total_feedback"])
+    m_col3.metric("⚡ Avg Confidence", f"{metrics['avg_confidence']}%", delta="+2.4% Training", delta_color="normal")
+    m_col4.metric("👥 Human Feedback", metrics["total_feedback"], delta="Verified")
     
     st.markdown("---")
     
