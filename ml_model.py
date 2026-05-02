@@ -7,6 +7,7 @@ Supports auto-retraining from human feedback (learning memory).
 import os
 import json
 import pickle
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.pipeline import Pipeline
@@ -194,7 +195,6 @@ def predict(ticket_text):
     domain = model['domain_pipeline'].predict([ticket_text])[0]
     
     # Calculate confidence proxy (normalize decision function scores)
-    import numpy as np
     def calculate_confidence(scores):
         if scores.ndim > 1:
             # Multi-class

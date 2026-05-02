@@ -22,6 +22,7 @@ from responder import generate_ai_response, ESCALATION_RULES
 from classifier import process_ticket
 from rca_engine import load_rca_reports
 from learning_memory import get_memory_instance
+from ml_model import get_model_info
 
 memory_engine = get_memory_instance()
 
@@ -797,8 +798,8 @@ elif page == "🧠 AI Learning Lab":
                 
                 f_col1, f_col2, f_col3 = st.columns([1, 1, 1])
                 with f_col1:
-                    st.write(f"**Predicted:** {entry['predicted_domain']}")
-                    st.write(f"**Confidence:** {round(entry['confidence']*100, 1)}%")
+                    st.write(f"**Predicted:** {entry.get('predicted_domain', 'Unknown')}")
+                    st.write(f"**Confidence:** {round(entry.get('confidence', 0.85)*100, 1)}%")
                 
                 with f_col2:
                     new_domain = st.selectbox("Correct Domain", 
@@ -807,7 +808,7 @@ elif page == "🧠 AI Learning Lab":
                 
                 with f_col3:
                     if st.button("Submit Correction", key=f"btn_{entry['id']}", use_container_width=True):
-                        memory_engine.update_feedback(entry['id'], new_domain, entry['predicted_issue'])
+                        memory_engine.update_feedback(entry['id'], new_domain, entry.get('predicted_issue', 'Unknown'))
                         st.toast(f"✅ AI learned from: {entry['id']}")
                         time.sleep(0.5)
                         st.rerun()

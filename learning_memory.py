@@ -8,8 +8,20 @@ MEMORY_FILE = "ticket_memory.json"
 class LearningMemory:
     def __init__(self):
         self._migrate_old_format()
+        self._fix_keys() # Self-healing check
         if not os.path.exists(MEMORY_FILE):
             self.save_data([])
+
+    def _fix_keys(self):
+        """Ensures all entries in the list have the correct keys."""
+        data = self.load_data()
+        changed = False
+        for entry in data:
+            if "predicted_label" in entry and "predicted_domain" not in entry:
+                entry["predicted_domain"] = entry.pop("predicted_label")
+                changed = True
+        if changed:
+            self.save_data(data)
 
     def _migrate_old_format(self):
         """Migrates old dict-based memory to new list-based format with UUIDs."""
@@ -24,7 +36,7 @@ class LearningMemory:
                                 "id": str(uuid.uuid4()),
                                 "timestamp": str(datetime.now()),
                                 "ticket": text,
-                                "predicted_label": correction.get("domain", "Unknown"),
+                                "predicted_domain": correction.get("domain", "Unknown"),
                                 "confidence": correction.get("confidence_score", 1.0),
                                 "final_label": correction.get("domain"),
                                 "human_correction": {
