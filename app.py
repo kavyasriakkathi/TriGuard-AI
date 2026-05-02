@@ -842,28 +842,40 @@ elif page == "🧠 AI Learning Lab":
         st.plotly_chart(fig_cm, use_container_width=True)
             
     # Feedback Section
-    st.markdown('<div class="section-header">👨‍🏫 Active Learning Interface</div>', unsafe_allow_html=True)
-    st.info("The AI has logged the following recent predictions. Correct them to improve future accuracy.")
+    st.markdown('<div class="section-header">👨‍🏫 Active Learning Interface (Human-in-the-Loop)</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background: rgba(77,171,247,0.1); border-left: 4px solid #4dabf7; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+        <p style="margin:0; color:#4dabf7; font-size:0.9rem;">
+            <strong>Pro Tip:</strong> Correcting misclassifications here will trigger an automated model retraining. 
+            The AI learns the patterns of your corrections to improve future accuracy.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    unlabeled = [d for d in reversed(data) if not d.get("final_domain")][:5]
+    unlabeled = [d for d in reversed(data) if not d.get("final_domain")][:3]
     
     if not unlabeled:
-        st.success("✨ All recent predictions have been verified or no new data available!")
+        st.success("✨ All recent predictions have been verified! System is at peak intelligence.")
     else:
         for entry in unlabeled:
             with st.container():
                 st.markdown(f"""
-                <div class="lab-card">
-                    <p style="font-size:0.9rem; color:#888;">Ticket Content:</p>
-                    <p style="font-weight:500; margin-bottom:15px;">"{entry['ticket']}"</p>
+                <div style="background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="color:#8b949e; font-size:0.75rem;">TICKET ID: {entry['id']}</span>
+                        <span style="background:#e94560; color:white; padding:2px 8px; border-radius:10px; font-size:0.7rem;">ACTION REQUIRED</span>
+                    </div>
+                    <p style="font-size:1.05rem; font-weight:500; margin: 15px 0; border-left: 3px solid #e94560; padding-left: 15px;">"{entry['ticket']}"</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                f_col1, f_col2, f_col3, f_col4 = st.columns([1.5, 1, 1, 1])
+                f_col1, f_col2, f_col3, f_col4 = st.columns([1.2, 1, 1, 0.8])
+                
                 with f_col1:
-                    st.write(f"**Predicted:** {entry.get('predicted_domain', 'Unknown')}")
-                    st.write(f"**Issue:** {entry.get('predicted_issue', 'Unknown')}")
-                    st.write(f"**Confidence:** {round(entry.get('confidence', 0.85)*100, 1)}%")
+                    st.markdown("**AI Prediction**")
+                    st.caption(f"Domain: {entry.get('predicted_domain', 'Unknown')}")
+                    st.caption(f"Issue: {entry.get('predicted_issue', 'Unknown')}")
+                    st.caption(f"Confidence: {round(entry.get('confidence', 0.85)*100, 1)}%")
                 
                 with f_col2:
                     new_domain = st.selectbox("Correct Domain", 
@@ -872,19 +884,20 @@ elif page == "🧠 AI Learning Lab":
                                             key=f"dom_{entry['id']}")
                 
                 with f_col3:
-                    new_issue = st.text_input("Correct Issue", value=entry.get('predicted_issue', 'Unknown'), key=f"iss_{entry['id']}")
+                    new_issue = st.text_input("Correct Issue Type", value=entry.get('predicted_issue', 'Unknown'), key=f"iss_{entry['id']}")
                     new_sev = st.selectbox("Correct Severity", ["SEV-1", "SEV-2", "SEV-3", "SEV-4"], 
                                          index=2, key=f"sev_{entry['id']}")
                 
                 with f_col4:
-                    st.write("") # Padding
-                    st.write("") 
-                    if st.button("Submit Correction", key=f"btn_{entry['id']}", use_container_width=True, type="primary"):
+                    st.write("") # Spacer
+                    st.write("")
+                    if st.button("Train AI", key=f"btn_{entry['id']}", use_container_width=True, type="primary"):
                         memory_engine.update_feedback(entry['id'], new_domain, new_issue, new_sev)
-                        st.toast(f"✅ AI learned from: {entry['id']}")
-                        time.sleep(0.5)
+                        st.balloons()
+                        st.toast(f"🧠 AI Model updated with correction for {entry['id'][:8]}...")
+                        time.sleep(1)
                         st.rerun()
-                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown("<hr style='border: 0.5px solid rgba(255,255,255,0.1); margin: 20px 0;'>", unsafe_allow_html=True)
 
     # Model Info
     st.markdown('<div class="section-header">🤖 ML Model Architecture</div>', unsafe_allow_html=True)
