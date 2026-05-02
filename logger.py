@@ -1,56 +1,31 @@
-import json
+
 import os
 from datetime import datetime
 
-LOG_FILE = "logs.json"
+LOG_FILE = "log.txt"
 
-def log_ticket(ticket_id, ticket_text, classification, response, is_incident=False):
-    log_entry = {
-        "timestamp": datetime.now().isoformat(),
-        "ticket_id": ticket_id,
-        "ticket_text": ticket_text,
-        "classification": classification,
-        "response": response,
-        "is_incident": is_incident
-    }
-    
-    logs = get_all_logs()
-    logs.append(log_entry)
-    
-    with open(LOG_FILE, 'w', encoding='utf-8') as f:
-        json.dump(logs, f, indent=4)
-
-def get_all_logs():
-    if not os.path.exists(LOG_FILE):
-        return []
-    with open(LOG_FILE, 'r', encoding='utf-8') as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return []
-
-def analyze_system_health():
+def log_ticket(ticket_id, ticket_text, classification, response):
     """
-    Smart Log Analytics Engine
-    Parses logs to detect system-wide anomalies or sudden ticket bursts.
+    Logs the ticket details into a professional audit file.
     """
-    logs = get_all_logs()
-    recent_logs = logs[-100:] # Analyze recent 100 logs
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    score = classification['priority_score']
+    status = "[ACTION REQUIRED] Escalated to Human" if score > 80 else "[SUCCESS] Automated Reply Sent"
+    log_type = "ALERT" if score > 80 else "AUDIT"
     
-    # Example heuristic: if we see multiple payment transaction failures
-    payment_failures = sum(1 for log in recent_logs 
-                           if log.get('classification', {}).get('domain') == 'Payments' 
-                           and log.get('classification', {}).get('issue_type') == 'Transaction Failed')
-    
-    # Security incident detection
-    security_incidents = sum(1 for log in recent_logs
-                             if log.get('classification', {}).get('domain') == 'Security')
-    
-    anomalies = []
-    # Spike detection
-    if payment_failures >= 3:
-        anomalies.append("Payment gateway timeout spikes detected")
-    if security_incidents >= 3:
-        anomalies.append("Multiple security incidents detected")
+    log_entry = (
+        f"[{timestamp}] [{log_type}] Ticket #{ticket_id}\n"
+        f"{'='*50}\n"
+        f"PLATFORM : {classification['domain']}\n"
+        f"ISSUE    : {classification['issue_type']}\n"
+        f"SCORE    : {score}\n"
+        f"STATUS   : {status}\n"
+        f"QUERY    : {ticket_text}\n"
+        f"RESPONSE : {response}\n"
+        f"{'='*50}\n\n"
+    )
+
+    with open(LOG_FILE, "a", encoding="utf-8") as file:
+        file.write(log_entry)
         
-    return anomalies
+    return True
