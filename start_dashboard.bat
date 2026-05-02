@@ -1,55 +1,58 @@
 @echo off
 setlocal
-title TriGuard AI - Dashboard Launcher
+title TriGuard AI - Premium Dashboard Launcher
 
 echo ===================================================
 echo 🛡️  TriGuard AI - Dashboard Launcher
 echo ===================================================
 echo.
 
-:: Check for virtual environment
+:: 1. Cleanup: Kill any existing processes on port 8501
+echo 🔍 Checking for existing dashboard processes on port 8501...
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8501 ^| findstr LISTENING') do (
+    if not "%%a"=="" (
+        echo 🔪 Closing ghost process (PID: %%a) to resolve port conflict...
+        taskkill /F /PID %%a >nul 2>&1
+    )
+)
+
+:: 2. Environment Setup
 set "PYTHON_EXE=python"
 if exist ".venv\Scripts\python.exe" (
     set "PYTHON_EXE=.venv\Scripts\python.exe"
     echo 📦 Using virtual environment (.venv)
+) else (
+    echo 🌐 Using global Python system
 )
 
-:: Check if Python is installed
-%PYTHON_EXE% --version >nul 2>&1
+:: 3. Dependencies Check
+echo [1/2] Verifying core dependencies...
+%PYTHON_EXE% -c "import streamlit, pandas, plotly, sklearn, rich" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ❌ ERROR: Python is not installed or not in your PATH.
-    echo Please install Python 3.10+ and try again.
-    pause
-    exit /b 1
+    echo 🛠️  Installing missing dependencies from requirements.txt...
+    %PYTHON_EXE% -m pip install -r requirements.txt --quiet
+) else (
+    echo ✅ Dependencies verified.
 )
 
-echo [1/3] Checking dependencies...
-%PYTHON_EXE% -m pip install streamlit pandas plotly scikit-learn rich --quiet
-if %errorlevel% neq 0 (
-    echo ❌ ERROR: Failed to install dependencies.
-    pause
-    exit /b %errorlevel%
-)
-echo ✅ Dependencies confirmed.
-echo.
-
-echo [2/3] Starting the Streamlit Web Server...
+:: 4. Start Streamlit
+echo [2/2] Starting the Streamlit Web Server...
 echo ⚠️  IMPORTANT: Keep this window open!
-echo Closing this window will stop the TriGuard AI dashboard.
-echo.
-echo The app will open at: http://localhost:8501
 echo.
 
-:: Try to start streamlit
-%PYTHON_EXE% -m streamlit run app.py --server.port 8501 --server.headless false
-if %errorlevel% neq 0 (
-    echo ⚠️  '%PYTHON_EXE% -m streamlit' failed. Trying direct 'streamlit run'...
-    streamlit run app.py --server.port 8501 --server.headless false
-)
+:: We use --server.headless false to ensure it opens the browser
+:: We use --browser.gatherUsageStats false for privacy and speed
+%PYTHON_EXE% -m streamlit run app.py --server.port 8501 --server.headless false --browser.gatherUsageStats false
 
 if %errorlevel% neq 0 (
+    echo.
     echo ❌ FATAL ERROR: Streamlit failed to start.
-    echo Check if another application is using port 8501.
+    echo ---------------------------------------------------
+    echo Troubleshooting:
+    echo 1. Check if port 8501 is blocked by a firewall.
+    echo 2. Run 'pip install -r requirements.txt' manually.
+    echo 3. Ensure app.py is in the current directory.
+    echo ---------------------------------------------------
 )
 
 echo.
