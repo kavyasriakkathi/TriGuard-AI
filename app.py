@@ -235,7 +235,7 @@ def load_logs():
 with st.sidebar:
     st.markdown('<div class="premium-badge">💎 TOP 1% EFFICIENCY</div>', unsafe_allow_html=True)
     st.markdown("## 🛡️ TriGuard AI")
-    st.markdown("<div><span class="status-pulse"></span><span style='color:#51cf66; font-size:0.8rem; font-weight:600;'>AI CORE ACTIVE</span></div>", unsafe_allow_html=True)
+    st.markdown("<div><span class=\"status-pulse\"></span><span style='color:#51cf66; font-size:0.8rem; font-weight:600;'>AI CORE ACTIVE</span></div>", unsafe_allow_html=True)
     st.markdown("---")
     
     page = st.radio("Navigate", [
@@ -788,11 +788,13 @@ elif page == "🧠 AI Learning Lab":
     metrics = memory_engine.get_performance_metrics()
     
     # Metrics Row
-    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-    m_col1.metric("📊 Total Predictions", metrics["total_logs"], delta="Active")
+    m_col1, m_col2, m_col3, m_col4, m_col5, m_col6 = st.columns(6)
+    m_col1.metric("📊 Total", metrics["total_logs"], delta="Active")
     m_col2.metric("🎯 Accuracy", f"{metrics['accuracy']}%", delta="Self-Improving")
-    m_col3.metric("⚡ Avg Confidence", f"{metrics['avg_confidence']}%", delta="+2.4% Training", delta_color="normal")
-    m_col4.metric("👥 Human Feedback", metrics["total_feedback"], delta="Verified")
+    m_col3.metric("⚡ Confidence", f"{metrics['avg_confidence']}%", delta="+2.4%", delta_color="normal")
+    m_col4.metric("📈 Precision", f"{metrics['precision']}%", delta="High")
+    m_col5.metric("🔄 Recall", f"{metrics['recall']}%", delta="Optimized")
+    m_col6.metric("👥 Feedback", metrics["total_feedback"], delta="Verified")
     
     st.markdown("---")
     
@@ -816,8 +818,25 @@ elif page == "🧠 AI Learning Lab":
             st.markdown('<div class="section-header">🎯 Confidence Distribution</div>', unsafe_allow_html=True)
             fig_hist = px.histogram(df_mem, x='confidence', nbins=10,
                                   template="plotly_dark", color_discrete_sequence=['#4dabf7'])
-            fig_hist.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+            fig_hist.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', height=300)
             st.plotly_chart(fig_hist, use_container_width=True)
+            
+    # Confusion Matrix Row
+    st.markdown('<div class="section-header">🧩 Category Confusion Matrix (Model Transparency)</div>', unsafe_allow_html=True)
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        st.write("This matrix shows exactly where the AI is performing best and where it might be misclassifying tickets between domains.")
+        st.info("💡 A strong diagonal line indicates high model reliability across all ticket types.")
+    with c2:
+        fig_cm = px.imshow(metrics["confusion_matrix"],
+                          labels=dict(x="Predicted Domain", y="Actual Domain", color="Count"),
+                          x=metrics["domains"],
+                          y=metrics["domains"],
+                          text_auto=True, aspect="auto",
+                          color_continuous_scale='Viridis',
+                          template="plotly_dark")
+        fig_cm.update_layout(height=400)
+        st.plotly_chart(fig_cm, use_container_width=True)
             
     # Feedback Section
     st.markdown('<div class="section-header">👨‍🏫 Active Learning Interface</div>', unsafe_allow_html=True)
@@ -863,3 +882,26 @@ elif page == "🧠 AI Learning Lab":
         ic1.write(f"**Base Model:** Support Vector Machine (LinearSVC)")
         ic2.write(f"**Vectorization:** TF-IDF (N-grams 1,2)")
         ic3.write(f"**Last Retrained:** {info['training_samples']} samples total")
+
+    # Final Demo Slide
+    st.markdown("---")
+    st.markdown("""
+    <div style="background: linear-gradient(90deg, #1a1a2e 0%, #16213e 100%); border-radius: 15px; padding: 40px; text-align: center; border: 1px solid #e94560;">
+        <h2 style="color: #e94560; margin-bottom: 20px;">🛡️ TriGuard AI — Hackathon Demo Summary</h2>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px;">
+                <h3 style="color: #4dabf7;">Self-Improving</h3>
+                <p>Human corrections feed directly into the retraining pipeline.</p>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px;">
+                <h3 style="color: #51cf66;">Incident Aware</h3>
+                <p>Clustering logic groups outbreaks into manageable incidents.</p>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px;">
+                <h3 style="color: #ffd43b;">Risk Driven</h3>
+                <p>Dynamic scoring prioritizes tickets by financial impact ($).</p>
+            </div>
+        </div>
+        <p style="margin-top: 30px; color: #888;">Thank you for reviewing TriGuard AI — The Future of Autonomous Incident Management.</p>
+    </div>
+    """, unsafe_allow_html=True)
