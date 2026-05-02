@@ -543,6 +543,15 @@ elif page == "🤖 AI Response Generator":
             new_df = pd.DataFrame([new_row])
             new_df.to_csv("output.csv", mode='a', header=False, index=False)
             
+            # --- 🧠 LEARNING: Log to Memory for the Learning Lab ---
+            if classification.get('source') == 'ml_model':
+                memory_engine.log_prediction(
+                    ticket_text, 
+                    domain, 
+                    issue_type, 
+                    classification.get('confidence_score', 0.85)
+                )
+            
             # --- 🧠 PERSISTENCE: Save result to session state ---
             st.session_state.last_result = {
                 "domain": domain,
